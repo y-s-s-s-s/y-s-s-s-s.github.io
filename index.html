@@ -219,7 +219,115 @@
       padding:12px; line-height:1.5; font-size:13px;
     }
     .muted{ font-size:12px; opacity:.82; margin:6px 0 0; }
-    .history{ margin-top:12px; font-size:13px; opacity:.92; }
+
+    /* ---- Progress (10 steps) ---- */
+    .progressCard{
+      margin-top:14px;
+      padding:12px;
+      border-radius:16px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      position:relative;
+    }
+    .progressTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .progressTitle{ font-size:13px; opacity:.95; }
+    .progressTitle b{ color:var(--ok); }
+
+    button.mini{
+      padding:10px 12px;
+      font-size:13px;
+      border-radius:12px;
+    }
+
+    /* レーンを画像に合わせて高さアップ */
+    .lane{
+      position:relative;
+      height:132px;
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.14);
+      overflow:hidden;
+    }
+    .laneGrid{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-columns: repeat(10, 1fr);
+      opacity:.55;
+    }
+    .laneGrid span{ border-right:1px solid rgba(255,255,255,.08); }
+    .laneGrid span:last-child{ border-right:none; }
+
+    /* 画像（2倍サイズ） */
+    .runnerImgWrap{
+      position:absolute;
+      top:50%;
+      left:0%;
+      transform: translate(-50%, -50%);
+      z-index:2;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.55));
+      transition: left 520ms cubic-bezier(.2,1,.2,1);
+    }
+    .runnerImgWrap.walk{ animation: walk 520ms ease-in-out 1; }
+    @keyframes walk{
+      0%{ transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+      30%{ transform: translate(-50%, -62%) rotate(-6deg) scale(1.05); }
+      60%{ transform: translate(-50%, -50%) rotate(6deg) scale(1.02); }
+      100%{ transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    }
+    #runnerImg{
+      width:96px; height:96px;
+      object-fit:contain;
+      user-select:none; -webkit-user-drag:none;
+      display:block;
+    }
+
+    .goalImgWrap{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform: translate(0, -50%);
+      z-index:2;
+      opacity:.98;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.45));
+    }
+    .goalImgWrap img{
+      width:96px; height:96px;
+      object-fit:contain;
+      user-select:none; -webkit-user-drag:none;
+      display:block;
+    }
+    #goal2Img{ display:none; }
+
+    .clearToast{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(255,213,74,.12);
+      border: 1px solid rgba(255,213,74,.25);
+      font-weight:1000;
+      text-align:center;
+      opacity:0;
+      transform: translateY(6px);
+      transition: .35s ease;
+    }
+    .clearToast.show{ opacity:1; transform: translateY(0); }
+
+    /* 履歴（直近）を一番下で見やすく */
+    .history{
+      margin-top:14px;
+      font-size:13px;
+      opacity:.92;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      padding:12px;
+    }
     .history b{ color:var(--ok); }
 
     @media (max-width:700px){
@@ -227,9 +335,12 @@
       .logo{ width:92px; height:92px; }
       .display{ font-size:22px; min-height:120px; }
       .grid{ grid-template-columns: 1fr; }
+      #runnerImg, .goalImgWrap img{ width:86px; height:86px; }
+      .lane{ height:124px; }
     }
   </style>
 </head>
+
 <body>
   <canvas id="fx"></canvas>
 
@@ -251,7 +362,7 @@
         </div>
 
         <div id="display" class="display">
-          スタートを押してね
+          読み込み中…
           <div id="badge" class="badge">当たり！</div>
         </div>
       </div>
@@ -262,7 +373,6 @@
 
       <div class="row">
         <button id="btnStart" class="start">抽選スタート</button>
-        <button id="btnAgain" class="reset">もう一回</button>
         <button id="btnClear" class="reset">履歴クリア</button>
 
         <label class="toggle" title="iPadはサイレントモードだと鳴らないことがあります">
@@ -271,15 +381,38 @@
         </label>
       </div>
 
-      <div class="history" id="history">履歴：なし</div>
+      <!-- 進捗レーン（10回でクリア） -->
+      <div class="progressCard" aria-label="進捗レーン">
+        <div class="progressTop">
+          <div class="progressTitle">ゴールまで <b><span id="stepNow">0</span></b> / <span id="stepMax">10</span></div>
+          <button id="btnProgressReset" class="reset mini">進捗リセット</button>
+        </div>
+
+        <div class="lane" id="lane">
+          <div class="laneGrid" id="laneGrid"></div>
+
+          <!-- キャラクター画像 -->
+          <div class="runnerImgWrap" id="runnerWrap" title="キャラクター">
+            <img id="runnerImg" src="./character.png" alt="character">
+          </div>
+
+          <!-- ゴール画像（通常=goal.png / クリア時=goal2.png） -->
+          <div class="goalImgWrap" id="goalWrap" title="ゴール">
+            <img id="goalImg" src="./goal.png" alt="goal">
+            <img id="goal2Img" src="./goal2.png" alt="goal2">
+          </div>
+        </div>
+
+        <div class="clearToast" id="clearToast">🎉 クリア！よくがんばったね！ 🎉</div>
+      </div>
 
       <div class="grid">
         <div>
-          <div class="muted">子ども用 質問（1行=1問）</div>
+          <div class="muted">子ども用 質問（CSVから表示。必要ならここを直接編集してもOK）</div>
           <textarea id="taChild"></textarea>
         </div>
         <div>
-          <div class="muted">保護者用 質問（1行=1問）</div>
+          <div class="muted">保護者用 質問（CSVから表示。必要ならここを直接編集してもOK）</div>
           <textarea id="taParent"></textarea>
         </div>
       </div>
@@ -288,28 +421,35 @@
         iPadでのコツ：Safari → 共有 →「ホーム画面に追加」でアプリ風に使えます。<br/>
         ※「音が鳴らない」時はサイレント解除＆音量確認をお願いします。
       </div>
+
+      <!-- ★履歴（直近）を一番下 -->
+      <div class="history" id="history">履歴：なし</div>
     </div>
   </div>
 
 <script>
-  // -------------------
-  // 初期質問（例）※自由に置き換えOK
-  // -------------------
-  const defaultChild = [
+  // =========================================================
+  // 2ファイルCSV（同じディレクトリ）
+  // =========================================================
+  const CSV_CHILD_FILE  = "./questions_child.csv";
+  const CSV_PARENT_FILE = "./questions_parent.csv";
+  // =========================================================
+
+  // フォールバック（CSVが読めない場合）
+  const fallbackChild = [
     "小学校でがんばりたいことは何ですか？",
     "好きな遊びは何ですか？",
     "お友達とケンカしたらどうしますか？",
     "バレエで好きなところはどこですか？",
     "困ったときはどうしますか？"
-  ].join("\n");
-
-  const defaultParent = [
+  ];
+  const fallbackParent = [
     "本校を志望された理由を教えてください。",
     "お子さまの長所と、伸ばしたい点を教えてください。",
     "つまずいたとき、家庭ではどのように関わりますか？",
     "ご家庭で大切にしていることを具体例で教えてください。",
     "『存在するだけですばらしい』をどう理解されていますか？"
-  ].join("\n");
+  ];
 
   // -------------------
   // UI参照
@@ -325,9 +465,6 @@
   const historyEl = document.getElementById("history");
   const soundToggle = document.getElementById("soundToggle");
 
-  taChild.value = defaultChild;
-  taParent.value = defaultParent;
-
   let mode = "child";
   let rolling = false;
 
@@ -335,9 +472,93 @@
   let history = [];
   const avoidN = 6;
 
-  // ルーレットの長さ（短め）
-  const SPIN_STEPS = 14;  // 少し短い
-  const SPIN_DELAY0 = 22; // 初期速度(ms)
+  // ルーレット演出（短め）
+  const SPIN_STEPS = 14;
+  const SPIN_DELAY0 = 22;
+
+  // CSVから読み込んだ質問（保持）
+  let childQuestions = [];
+  let parentQuestions = [];
+
+  // -------------------
+  // 進捗（10回でクリア）
+  // -------------------
+  const GOAL_STEPS = 10;
+  const STEP_KEY = "gacha_progress_step_v4";
+  let stepCount = 0;
+
+  const stepNowEl = document.getElementById("stepNow");
+  const stepMaxEl = document.getElementById("stepMax");
+  const laneGridEl = document.getElementById("laneGrid");
+  const runnerWrap = document.getElementById("runnerWrap");
+  const goalImg = document.getElementById("goalImg");
+  const goal2Img = document.getElementById("goal2Img");
+  const clearToastEl = document.getElementById("clearToast");
+  const btnProgressReset = document.getElementById("btnProgressReset");
+
+  (function buildLane(){
+    stepMaxEl.textContent = GOAL_STEPS;
+    laneGridEl.style.gridTemplateColumns = `repeat(${GOAL_STEPS}, 1fr)`;
+    laneGridEl.innerHTML = "";
+    for(let i=0;i<GOAL_STEPS;i++){
+      laneGridEl.appendChild(document.createElement("span"));
+    }
+  })();
+
+  function syncClearVisuals(){
+    const cleared = (stepCount >= GOAL_STEPS);
+    runnerWrap.style.display = cleared ? "none" : "block";
+    goalImg.style.display = cleared ? "none" : "block";
+    goal2Img.style.display = cleared ? "block" : "none";
+  }
+
+  function renderProgress(animate=true){
+    stepNowEl.textContent = stepCount;
+
+    // 位置：0〜90%で止める（ゴール画像があるため）
+    const pct = (stepCount / GOAL_STEPS) * 90;
+    const clamped = Math.max(0, Math.min(90, pct));
+
+    if(animate){
+      runnerWrap.classList.remove("walk");
+      void runnerWrap.offsetWidth;
+      runnerWrap.classList.add("walk");
+    }else{
+      runnerWrap.classList.remove("walk");
+    }
+    runnerWrap.style.left = clamped + "%";
+
+    if(stepCount >= GOAL_STEPS) clearToastEl.classList.add("show");
+    else clearToastEl.classList.remove("show");
+
+    syncClearVisuals();
+    localStorage.setItem(STEP_KEY, String(stepCount));
+  }
+
+  function advanceProgress(){
+    if(stepCount >= GOAL_STEPS) return;
+    stepCount++;
+    renderProgress(true);
+
+    if(stepCount >= GOAL_STEPS){
+      spawnSparkle(200, true);
+      spawnSparkle(100, false);
+      ringFlash();
+      playBell();
+      playFanfare();
+    }
+  }
+
+  (function restoreStep(){
+    const saved = Number(localStorage.getItem(STEP_KEY) || "0");
+    stepCount = Number.isFinite(saved) ? Math.max(0, Math.min(GOAL_STEPS, saved)) : 0;
+    renderProgress(false);
+  })();
+
+  btnProgressReset.addEventListener("click", ()=>{
+    stepCount = 0;
+    renderProgress(false);
+  });
 
   // -------------------
   // Canvas resize
@@ -354,7 +575,7 @@
   resize();
 
   // -------------------
-  // WebAudio（豪華サウンド：外部ファイル無し）
+  // WebAudio（外部ファイル無し）
   // -------------------
   let audioCtx = null;
   function ctx(){
@@ -403,7 +624,6 @@
     const c = ctx();
     const t = c.currentTime;
 
-    // tick (square)
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = "square";
@@ -416,7 +636,6 @@
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
     o.start(t); o.stop(t + 0.06);
 
-    // shimmer noise
     playNoiseBurst(t, 0.06, 0.06, 4200 + Math.random()*1200);
   }
 
@@ -425,7 +644,6 @@
     const c = ctx();
     const t = c.currentTime;
 
-    // bell-ish: sine + partials
     const freqs = [880, 1320, 1760];
     freqs.forEach((f, i)=>{
       const o = c.createOscillator();
@@ -440,7 +658,6 @@
       o.stop(t + 0.33 + i*0.08);
     });
 
-    // tiny sparkle
     playNoiseBurst(t, 0.10, 0.08, 6500);
   }
 
@@ -449,8 +666,7 @@
     const c = ctx();
     const t0 = c.currentTime;
 
-    // short fanfare notes
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C E G C
+    const notes = [523.25, 659.25, 783.99, 1046.5];
     notes.forEach((f, i)=>{
       const t = t0 + i*0.07;
       const o = c.createOscillator();
@@ -465,8 +681,7 @@
       o.stop(t + 0.13);
     });
 
-    // chord tail
-    const chord = [392, 494, 587]; // G B D
+    const chord = [392, 494, 587];
     chord.forEach((f, i)=>{
       const t = t0 + 0.28;
       const o = c.createOscillator();
@@ -481,7 +696,6 @@
       o.stop(t + 0.5);
     });
 
-    // “ジャーン！” noise hit
     playNoiseBurst(t0 + 0.27, 0.18, 0.12, 2400);
     playNoiseBurst(t0 + 0.30, 0.22, 0.08, 5200);
   }
@@ -490,8 +704,7 @@
   // キラキラ粒子（Canvas）
   // -------------------
   const particles = [];
-  let fxRunning = true;
-  let sparkleMode = "idle"; // "idle" | "spin" | "win"
+  let sparkleMode = "idle"; // "idle" | "spin"
 
   function rand(a,b){ return a + Math.random()*(b-a); }
   function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -533,9 +746,7 @@
   }
 
   function ringFlash(){
-    // draw a quick ring at center-top for “impact”
     const r = {x: innerWidth*0.67, y: innerHeight*0.23, t:0};
-    const id = Symbol();
     const step = () => {
       r.t += 1;
       const p = r.t/18;
@@ -554,10 +765,8 @@
   }
 
   function fxLoop(){
-    if(!fxRunning) return;
     cx.clearRect(0,0,innerWidth,innerHeight);
 
-    // continuous sparkle during spin
     if(sparkleMode === "spin"){
       if(Math.random() < 0.55) spawnSparkle(3, false);
     }
@@ -590,6 +799,84 @@
   requestAnimationFrame(fxLoop);
 
   // -------------------
+  // CSV parser（簡易・クォート対応）
+  //  - 1行=1問（1列目を質問として採用）
+  //  - 空行は無視
+  // -------------------
+  function parseCSV(text){
+    text = text.replace(/^\uFEFF/, ""); // BOM除去
+    const rows = [];
+    let cur = "", row = [], inQuotes = false;
+
+    for(let i=0;i<text.length;i++){
+      const ch = text[i];
+      const next = text[i+1];
+
+      if(ch === '"'){
+        if(inQuotes && next === '"'){ cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      }else if(ch === ',' && !inQuotes){
+        row.push(cur); cur = "";
+      }else if((ch === '\n' || ch === '\r') && !inQuotes){
+        if(ch === '\r' && next === '\n') i++;
+        row.push(cur); cur = "";
+        rows.push(row);
+        row = [];
+      }else{
+        cur += ch;
+      }
+    }
+    if(cur.length || row.length){
+      row.push(cur);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  async function loadSingleCSV(path){
+    // 更新反映が早くなるように cache bust
+    const res = await fetch(path + "?v=" + Date.now(), { cache: "no-store" });
+    if(!res.ok) throw new Error("CSV fetch failed: " + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    const out = [];
+    for(const r of rows){
+      if(!r || r.length === 0) continue;
+      // 1列目を質問として扱う
+      const q = (r[0] || "").trim();
+      if(!q) continue;
+      out.push(q);
+    }
+    return out;
+  }
+
+  async function loadAllCSVs(){
+    try{
+      const [c, p] = await Promise.all([
+        loadSingleCSV(CSV_CHILD_FILE),
+        loadSingleCSV(CSV_PARENT_FILE)
+      ]);
+
+      childQuestions = c.length ? c : fallbackChild.slice();
+      parentQuestions = p.length ? p : fallbackParent.slice();
+
+      // テキスト欄へ反映（ここで編集もできる）
+      taChild.value = childQuestions.join("\n");
+      taParent.value = parentQuestions.join("\n");
+
+      display.textContent = "スタートを押してね";
+    }catch(e){
+      console.warn(e);
+      childQuestions = fallbackChild.slice();
+      parentQuestions = fallbackParent.slice();
+      taChild.value = childQuestions.join("\n");
+      taParent.value = parentQuestions.join("\n");
+      display.textContent = "スタートを押してね（CSV読込失敗：フォールバック）";
+    }
+  }
+
+  // -------------------
   // タブ切替
   // -------------------
   tabs.forEach(t => t.addEventListener("click", ()=>{
@@ -602,6 +889,7 @@
   }));
 
   function getList(){
+    // CSVで投入→textareaに反映済み。以降はtextareaの内容を使う（編集が効く）
     const raw = (mode === "child" ? taChild.value : taParent.value);
     return raw.split("\n").map(s=>s.trim()).filter(Boolean);
   }
@@ -636,7 +924,7 @@
     if(rolling) return;
     const list = getList();
     if(list.length === 0){
-      display.textContent = "質問が空です。テキスト欄に質問を入れてね。";
+      display.textContent = "質問が空です。CSVまたはテキスト欄に質問を入れてね。";
       return;
     }
 
@@ -647,11 +935,9 @@
 
     await ensureAudio();
 
-    // spin mode ON
     sparkleMode = "spin";
     logo.classList.add("spin");
 
-    // 短め：だいたい0.8〜1.1秒
     let delay = SPIN_DELAY0;
     let q = null;
 
@@ -666,34 +952,31 @@
       await new Promise(r=>setTimeout(r, delay));
     }
 
-    // final pick
     q = pickSmart(list);
     display.textContent = q;
 
-    // spin mode OFF → win!
     sparkleMode = "idle";
     logo.classList.remove("spin");
 
-    // strong win visuals
     display.classList.add("flash");
     badge.classList.add("show");
     logo.classList.add("logoWin");
 
-    // FX burst
-    spawnSparkle(120, true);     // burst
-    spawnSparkle(60, false);     // falling sparkle
+    spawnSparkle(120, true);
+    spawnSparkle(60, false);
     ringFlash();
 
-    // rich sound
     playBell();
     playFanfare();
 
     updateHistory(q);
+    advanceProgress(); // 10回でクリア
+
     rolling = false;
   }
 
   document.getElementById("btnStart").addEventListener("click", roulette);
-  document.getElementById("btnAgain").addEventListener("click", roulette);
+
   document.getElementById("btnClear").addEventListener("click", ()=>{
     history = [];
     historyEl.textContent = "履歴：なし";
@@ -702,6 +985,9 @@
     badge.classList.remove("show");
     logo.classList.remove("logoWin");
   });
+
+  // 起動時にCSV読み込み
+  loadAllCSVs();
 </script>
 </body>
 </html>
