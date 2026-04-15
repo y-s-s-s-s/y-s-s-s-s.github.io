@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>ひらがな なぞりゲーム（画数順）</title>
+  <style>
+    :root{
+      --bg1:#08102e; --bg2:#0b2a3a;
+      --card: rgba(255,255,255,.10);
+      --stroke: rgba(255,255,255,.16);
+      --text:#f2f6ff;
+      --accent:#ffd54a;
+      --ok:#7CFFB2;
+      --ng:#ff7a7a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+      color:var(--text);
+      min-height:100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(1000px 700px at 15% 10%, #253d85, var(--bg1)),
+        radial-gradient(900px 650px at 90% 20%, #3c1d7a, transparent 60%),
+        radial-gradient(900px 650px at 50% 120%, #145a5e, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+    .wrap{ width:min(980px, 94vw); padding:16px 0 22px; }
+    .topbar{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    h1{
+      margin:0;
+      font-size:18px;
+      font-weight:1000;
+      letter-spacing:.03em;
+      display:flex; align-items:baseline; gap:10px;
+    }
+    .pillRow{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    .pill{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+      user-select:none;
+    }
+    .pill b{color:var(--ok)}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.06));
+      border:1px solid var(--stroke);
+      border-radius:20px;
+      padding:16px;
+      box-shadow: 0 20px 80px rgba(0,0,0,.45);
+      position:relative;
+      overflow:hidden;
+    }
+    .row{
+      display:flex; gap:12px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+      margin:8px 0 12px;
+    }
+    .bigChar{
+      font-size:44px;
+      font-weight:1000;
+      letter-spacing:.02em;
+      display:flex; align-items:baseline; gap:10px;
+    }
+    .bigChar small{
+      font-size:13px;
+      opacity:.90;
+      font-weight:900;
+    }
+    .status{
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:14px;
+      font-weight:900;
+      min-width: 240px;
+      text-align:center;
+    }
+    .status.ok{ border-color: rgba(124,255,178,.35); }
+    .status.ng{ border-color: rgba(255,122,122,.35); }
+
+    .board{
+      position:relative;
+      border-radius:18px;
+      background:rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.14);
+      overflow:hidden;
+      height:min(60vh, 520px);
+      min-height:320px;
+      touch-action:none; /* 重要：iPadでスクロールさせない */
+    }
+    canvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+
+    .controls{
+      display:flex; gap:10px; flex-wrap:wrap;
+      justify-content:center;
+      margin-top:12px;
+    }
+    button{
+      border:none;
+      cursor:pointer;
+      user-select:none;
+      touch-action:manipulation;
+      font-weight:1000;
+      border-radius:14px;
+      padding:12px 14px;
+      font-size:14px;
+      color:var(--text);
+      background: rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.16);
+    }
+    button.primary{
+      background: rgba(255,213,74,.18);
+      border-color: rgba(255,213,74,.45);
+      color:#221400;
+    }
+    button.ok{
+      background: rgba(124,255,178,.14);
+      border-color: rgba(124,255,178,.40);
+    }
+    button:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+
+    .toggles{
+      display:flex; gap:10px; flex-wrap:wrap;
+      justify-content:center;
+      margin-top:10px;
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      font-size:13px;
+      font-weight:900;
+    }
+    .toggle input{ transform:scale(1.2); }
+
+    .progress{
+      margin-top:14px;
+      padding:12px;
+      border-radius:16px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .progTitle{
+      font-size:12px;
+      opacity:.9;
+      font-weight:900;
+      margin-bottom:8px;
+      display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap:6px;
+    }
+    .cell{
+      text-align:center;
+      padding:8px 0;
+      border-radius:10px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      font-weight:900;
+      user-select:none;
+      font-size:14px;
+    }
+    .cell.done{
+      background: rgba(124,255,178,.14);
+      border-color: rgba(124,255,178,.35);
+    }
+    .cell.now{
+      outline:2px solid rgba(255,213,74,.55);
+      background: rgba(255,213,74,.14);
+      border-color: rgba(255,213,74,.35);
+    }
+
+    .tip{
+      margin-top:10px;
+      text-align:center;
+      font-size:12px;
+      opacity:.86;
+      line-height:1.45;
+    }
+
+    @media (max-width:720px){
+      .bigChar{font-size:40px}
+      .board{min-height:300px}
+      .grid{grid-template-columns: repeat(8, 1fr);}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <h1>✍️ ひらがな なぞりゲーム <span style="opacity:.85;font-weight:900;font-size:12px;">（画数が少ない順）</span></h1>
+      <div class="pillRow">
+        <div class="pill">いま：<b><span id="idxNow">1</span></b>/<span id="idxMax">46</span></div>
+        <div class="pill">できた：<b><span id="doneCount">0</span></b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="bigChar">
+          <span>「<span id="charNow">く</span>」</span>
+          <small>（<span id="strokeNow">1</span> 画）</small>
+        </div>
+        <div id="status" class="status">ゆびで なぞってね</div>
+      </div>
+
+      <div class="board" id="board" aria-label="なぞりボード">
+        <canvas id="guide"></canvas>
+        <canvas id="draw"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="btnClear">やりなおし</button>
+        <button id="btnCheck" class="ok">チェック</button>
+        <button id="btnPrev">まえ</button>
+        <button id="btnNext" class="primary" disabled>つぎ</button>
+        <button id="btnReset">ぜんぶリセット</button>
+      </div>
+
+      <div class="toggles">
+        <label class="toggle"><input id="toggleGuide" type="checkbox" checked> ガイド表示</label>
+        <label class="toggle" title="iPadは最初の操作で音声が有効になります（仕様）"><input id="toggleSpeak" type="checkbox" checked> おと（読み上げ）</label>
+      </div>
+
+      <div class="progress">
+        <div class="progTitle">
+          <span>学習のすすみ（タップで移動できます）</span>
+          <span style="opacity:.85">保存：この端末のみ</span>
+        </div>
+        <div class="grid" id="progGrid"></div>
+      </div>
+
+      <div class="tip">
+        iPadのコツ：Safari → 共有 →「ホーム画面に追加」でアプリみたいに使えます。<br>
+        線が細い/太い調整が必要なら言ってください（子ども向けに最適化します）。
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   ひらがな（清音46）とストローク数（書き順学習の表記に合わせたもの）
+   ※画数の数え方は資料により差がありますが、ここでは書き順学習系の数を採用[1](https://www.japanesejlpt.com/learn-japanese/hiragana-stroke-order/)[2](https://maikojapan.com/list-of-hiragana-with-stroke-order-animations/)
+   ========================================================= */
+const base46 = [
+  {ch:"あ",s:3},{ch:"い",s:2},{ch:"う",s:2},{ch:"え",s:2},{ch:"お",s:3},
+  {ch:"か",s:3},{ch:"き",s:4},{ch:"く",s:1},{ch:"け",s:3},{ch:"こ",s:2},
+  {ch:"さ",s:3},{ch:"し",s:1},{ch:"す",s:2},{ch:"せ",s:3},{ch:"そ",s:1},
+  {ch:"た",s:4},{ch:"ち",s:2},{ch:"つ",s:1},{ch:"て",s:1},{ch:"と",s:2},
+  {ch:"な",s:4},{ch:"に",s:3},{ch:"ぬ",s:2},{ch:"ね",s:2},{ch:"の",s:1},
+  {ch:"は",s:3},{ch:"ひ",s:1},{ch:"ふ",s:4},{ch:"へ",s:1},{ch:"ほ",s:4},
+  {ch:"ま",s:3},{ch:"み",s:2},{ch:"む",s:3},{ch:"め",s:2},{ch:"も",s:3},
+  {ch:"や",s:3},{ch:"ゆ",s:2},{ch:"よ",s:2},
+  {ch:"ら",s:2},{ch:"り",s:2},{ch:"る",s:1},{ch:"れ",s:2},{ch:"ろ",s:1},
+  {ch:"わ",s:2},{ch:"を",s:3},{ch:"ん",s:1},
+];
+
+const gojuon = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+
+const order = [...base46].sort((a,b)=>{
+  if(a.s !== b.s) return a.s - b.s;
+  return gojuon.indexOf(a.ch) - gojuon.indexOf(b.ch);
+});
+
+const STORAGE_KEY = "hiragana_trace_progress_v1";
+
+/* ============================
+   DOM
+   ============================ */
+const guideCanvas = document.getElementById("guide");
+const drawCanvas  = document.getElementById("draw");
+const board       = document.getElementById("board");
+
+const charNowEl   = document.getElementById("charNow");
+const strokeNowEl = document.getElementById("strokeNow");
+const idxNowEl    = document.getElementById("idxNow");
+const idxMaxEl    = document.getElementById("idxMax");
+const doneCountEl = document.getElementById("doneCount");
+const statusEl    = document.getElementById("status");
+
+const progGrid    = document.getElementById("progGrid");
+
+const btnClear = document.getElementById("btnClear");
+const btnCheck = document.getElementById("btnCheck");
+const btnPrev  = document.getElementById("btnPrev");
+const btnNext  = document.getElementById("btnNext");
+const btnReset = document.getElementById("btnReset");
+
+const toggleGuide = document.getElementById("toggleGuide");
+const toggleSpeak = document.getElementById("toggleSpeak");
+
+idxMaxEl.textContent = String(order.length);
+
+/* ============================
+   進捗ロード
+   ============================ */
+let progress = {};
+try{
+  progress = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {};
+}catch(e){ progress = {}; }
+
+function saveProgress(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+/* ============================
+   現在の文字Index
+   ============================ */
+let currentIndex = (() => {
+  const firstUndone = order.findIndex(x => !progress[x.ch]);
+  return firstUndone >= 0 ? firstUndone : 0;
+})();
+
+/* ============================
+   Canvas（HiDPI）
+   ============================ */
+let dpr = Math.min(2, window.devicePixelRatio || 1);
+let cw = 0, ch = 0;
+
+function resizeCanvas(){
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+
+  const r = board.getBoundingClientRect();
+  cw = Math.max(1, Math.floor(r.width));
+  ch = Math.max(1, Math.floor(r.height));
+
+  [guideCanvas, drawCanvas].forEach(c=>{
+    c.width = Math.floor(cw * dpr);
+    c.height = Math.floor(ch * dpr);
+    c.style.width = cw + "px";
+    c.style.height = ch + "px";
+    const ctx = c.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  });
+
+  drawGuide();
+  clearDraw(false);
+}
+
+window.addEventListener("resize", () => {
+  setTimeout(resizeCanvas, 80);
+}, {passive:true});
+
+/* ============================
+   ガイド描画（お手本）
+   ============================ */
+function drawGuide(){
+  const ctx = guideCanvas.getContext("2d");
+  ctx.clearRect(0,0,cw,ch);
+
+  // 背景グリッド（薄く）
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  const step = Math.max(40, Math.floor(Math.min(cw,ch)/8));
+  for(let x=step; x<cw; x+=step){
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,ch); ctx.stroke();
+  }
+  for(let y=step; y<ch; y+=step){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cw,y); ctx.stroke();
+  }
+  ctx.restore();
+
+  if(!toggleGuide.checked) return;
+
+  // 文字を大きく中心へ
+  const item = order[currentIndex];
+  const char = item.ch;
+
+  const size = Math.floor(Math.min(cw, ch) * 0.68);
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // ふち取りで“なぞり感”アップ
+  ctx.font = `900 ${size}px "Hiragino Mincho ProN","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = Math.max(10, size * 0.06);
+  ctx.strokeText(char, cw/2, ch/2);
+
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fillText(char, cw/2, ch/2);
+
+  ctx.restore();
+}
+
+/* ============================
+   手書き描画
+   ============================ */
+const dctx = drawCanvas.getContext("2d");
+let drawing = false;
+let lastX = 0, lastY = 0;
+let inked = false;
+
+function setPenStyle(){
+  dctx.lineCap = "round";
+  dctx.lineJoin = "round";
+  dctx.strokeStyle = "rgba(90,216,255,0.95)";
+  const base = Math.min(cw,ch);
+  dctx.lineWidth = Math.max(10, base * 0.045); // 子ども向け太め
+}
+
+function clearDraw(update=true){
+  dctx.clearRect(0,0,cw,ch);
+  setPenStyle();
+  drawing = false;
+  inked = false;
+  btnNext.disabled = true;
+  if(update){
+    setStatus("ゆびで なぞってね");
+  }
+}
+
+function getPos(ev){
+  const rect = drawCanvas.getBoundingClientRect();
+  return {
+    x: (ev.clientX - rect.left),
+    y: (ev.clientY - rect.top)
+  };
+}
+
+board.addEventListener("pointerdown", (ev)=>{
+  ev.preventDefault();
+  drawCanvas.setPointerCapture(ev.pointerId);
+  const p = getPos(ev);
+  drawing = true;
+  lastX = p.x; lastY = p.y;
+  setPenStyle();
+  dctx.beginPath();
+  dctx.moveTo(lastX, lastY);
+}, {passive:false});
+
+board.addEventListener("pointermove", (ev)=>{
+  if(!drawing) return;
+  ev.preventDefault();
+  const p = getPos(ev);
+
+  // 直線補間（なめらか）
+  dctx.lineTo(p.x, p.y);
+  dctx.stroke();
+
+  lastX = p.x; lastY = p.y;
+  inked = true;
+}, {passive:false});
+
+function endStroke(ev){
+  if(!drawing) return;
+  ev.preventDefault();
+  drawing = false;
+}
+board.addEventListener("pointerup", endStroke, {passive:false});
+board.addEventListener("pointercancel", endStroke, {passive:false});
+
+/* ============================
+   ステータス
+   ============================ */
+function setStatus(msg, kind=""){
+  statusEl.textContent = msg;
+  statusEl.classList.remove("ok","ng");
+  if(kind) statusEl.classList.add(kind);
+}
+
+/* ============================
+   読み上げ（iPad対応）
+   ============================ */
+function speak(text){
+  if(!toggleSpeak.checked) return;
+  if(!("speechSynthesis" in window)) return;
+  try{
+    window.speechSynthesis.cancel();
+    const ut = new SpeechSynthesisUtterance(text);
+    ut.lang = "ja-JP";
+    ut.rate = 0.9;
+    ut.pitch = 1.05;
+    window.speechSynthesis.speak(ut);
+  }catch(e){}
+}
+/* ============================
+   採点（テンプレと重なり率）
+   ============================ */
+function evaluate(){
+  if(!inked){
+    setStatus("まず なぞってみよう！", "ng");
+    speak("まず なぞってみよう");
+    return false;
+  }
+
+  // テンプレ（ガイド文字）をオフスクリーンに描いてピクセル比較
+  const offT = document.createElement("canvas");
+  offT.width = Math.floor(cw * dpr);
+  offT.height = Math.floor(ch * dpr);
+  const tctx = offT.getContext("2d");
+  tctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const item = order[currentIndex];
+  const char = item.ch;
+  const size = Math.floor(Math.min(cw, ch) * 0.68);
+
+  // テンプレ：黒で太く描く（比較用）
+  tctx.clearRect(0,0,cw,ch);
+  tctx.textAlign="center";
+  tctx.textBaseline="middle";
+  tctx.font = `900 ${size}px "Hiragino Mincho ProN","Hiragino Sans","Noto Sans JP",sans-serif`;
+  tctx.lineJoin="round"; tctx.lineCap="round";
+  tctx.strokeStyle="rgba(0,0,0,1)";
+  tctx.lineWidth = Math.max(10, size * 0.06);
+  tctx.strokeText(char, cw/2, ch/2);
+
+  // user：drawCanvas の内容（青）を取得
+  const user = dctx.getImageData(0,0,cw,ch).data;
+  const tmpl = tctx.getImageData(0,0,cw,ch).data;
+
+  let tmplCount = 0;
+  let hit = 0;
+  let userCount = 0;
+
+  // 閾値
+  const T_THR = 20; // テンプレ黒（α）
+  const U_THR = 20; // ユーザー青（α）
+
+  for(let i=0;i<tmpl.length;i+=4){
+    const ta = tmpl[i+3];
+    const ua = user[i+3];
+
+    if(ta > T_THR){
+      tmplCount++;
+      if(ua > U_THR) hit++;
+    }
+    if(ua > U_THR) userCount++;
+  }
+
+  // 重なり率（テンプレ上のカバー率）
+  const cover = tmplCount ? (hit / tmplCount) : 0;
+  // 誤差で塗り散らかしてもOKにならないよう “描いた量” も見る
+  const inkRatio = tmplCount ? (userCount / tmplCount) : 0;
+
+  // 子ども向け：少し甘め（必要なら調整できます）
+  const pass = (cover >= 0.28 && inkRatio >= 0.18);
+
+  if(pass){
+    setStatus("せいかい！つぎへ いこう！", "ok");
+    speak(char);
+    btnNext.disabled = false;
+    // 進捗ON（この文字を達成）
+    progress[char] = true;
+    saveProgress();
+    renderProgressUI();
+    updateHeader();
+    return true;
+  }else{
+    setStatus("もう すこし！ゆっくり なぞってみよう", "ng");
+    speak("もう すこし");
+    btnNext.disabled = true;
+    return false;
+  }
+}
+
+/* ============================
+   UI更新
+   ============================ */
+function updateHeader(){
+  const item = order[currentIndex];
+  charNowEl.textContent = item.ch;
+  strokeNowEl.textContent = String(item.s);
+
+  idxNowEl.textContent = String(currentIndex + 1);
+
+  const done = order.filter(x => progress[x.ch]).length;
+  doneCountEl.textContent = String(done);
+
+  // 前後ボタン
+  btnPrev.disabled = (currentIndex <= 0);
+  btnNext.disabled = true;
+}
+
+function renderProgressUI(){
+  progGrid.innerHTML = "";
+  order.forEach((it, idx) => {
+    const el = document.createElement("div");
+    el.className = "cell";
+    el.textContent = it.ch;
+    if(progress[it.ch]) el.classList.add("done");
+    if(idx === currentIndex) el.classList.add("now");
+    el.title = `${it.ch}（${it.s}画）`;
+    el.addEventListener("click", () => {
+      currentIndex = idx;
+      drawGuide();
+      clearDraw(true);
+      renderProgressUI();
+      updateHeader();
+    });
+    progGrid.appendChild(el);
+  });
+}
+
+/* ============================
+   操作ボタン
+   ============================ */
+btnClear.addEventListener("click", ()=> clearDraw(true));
+btnCheck.addEventListener("click", ()=> evaluate());
+
+btnPrev.addEventListener("click", ()=>{
+  if(currentIndex > 0){
+    currentIndex--;
+    drawGuide();
+    clearDraw(true);
+    renderProgressUI();
+    updateHeader();
+  }
+});
+
+btnNext.addEventListener("click", ()=>{
+  // 次の未達成へ（なければ次インデックス）
+  for(let i=currentIndex+1; i<order.length; i++){
+    currentIndex = i;
+    break;
+  }
+  // もし最後まで行ったら最初へ
+  if(currentIndex >= order.length) currentIndex = 0;
+
+  drawGuide();
+  clearDraw(true);
+  renderProgressUI();
+  updateHeader();
+});
+
+btnReset.addEventListener("click", ()=>{
+  if(confirm("ぜんぶリセットしますか？（できた！が全部消えます）")){
+    progress = {};
+    saveProgress();
+    currentIndex = 0;
+    drawGuide();
+    clearDraw(true);
+    renderProgressUI();
+    updateHeader();
+    setStatus("リセットしたよ。さいしょから！", "ng");
+    speak("さいしょから");
+  }
+});
+
+btnTheme?.addEventListener?.("click", ()=>{}); // 互換用（未使用）
+
+toggleGuide.addEventListener("change", ()=>{
+  drawGuide();
+});
+
+toggleSpeak.addEventListener("change", ()=>{
+  // iOS: ユーザー操作後に voices が準備される場合があるため noop
+});
+
+/* ============================
+   初期化
+   ============================ */
+function init(){
+  renderProgressUI();
+  updateHeader();
+  resizeCanvas();
+  setStatus("ゆびで なぞってね");
+}
+
+init();
+</script>
+</body>
+</html>
