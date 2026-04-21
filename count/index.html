@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>かずをかぞえよう（1〜9）</title>
+  <style>
+    :root{
+      --bg1:#0b1538;
+      --bg2:#0b2a3a;
+      --stroke:rgba(255,255,255,.16);
+      --text:#f2f5ff;
+      --accent:#ffd54a;
+      --ok:#7CFFB2;
+      --ng:#ff7a7a;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 700px at 15% 10%, #253d85, var(--bg1)),
+        radial-gradient(900px 650px at 85% 20%, #3c1d7a, transparent 60%),
+        radial-gradient(900px 650px at 50% 120%, #145a5e, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    /* FX canvas */
+    #fx{
+      position:fixed; inset:0;
+      width:100vw; height:100vh;
+      pointer-events:none;
+      z-index:5;
+    }
+
+    .wrap{
+      width:min(980px, 94vw);
+      padding:18px 0 26px;
+      z-index:10;
+    }
+    .titleRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 0 10px;
+      flex-wrap:wrap;
+    }
+    h1{
+      margin:0;
+      font-weight:1000;
+      letter-spacing:.04em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      line-height:1.2;
+    }
+    .pillRow{
+      display:flex; gap:8px; flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .pill{
+      font-size:12px;
+      font-weight:900;
+      padding:7px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill b{ color:var(--ok); }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.06));
+      border:1px solid var(--stroke);
+      border-radius:20px;
+      padding:16px;
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:-60% -40%;
+      background: conic-gradient(from 180deg, transparent, rgba(255,255,255,.08), transparent 40%);
+      animation: sheen 9s linear infinite;
+      opacity:.35;
+      pointer-events:none;
+    }
+    @keyframes sheen{
+      0%{ transform:rotate(0deg) translateZ(0); }
+      100%{ transform:rotate(360deg) translateZ(0); }
+    }
+
+    .prompt{
+      text-align:center;
+      font-weight:1000;
+      font-size:22px;
+      line-height:1.25;
+      padding:10px 12px 6px;
+      position:relative;
+    }
+    .prompt small{
+      display:block;
+      font-weight:800;
+      font-size:13px;
+      opacity:.88;
+      margin-top:6px;
+    }
+
+    .stage{
+      background:rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:14px;
+      min-height:260px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* 自由配置エリア */
+    .items{
+      position:relative;
+      width:min(560px, 96%);
+      height:320px;
+      max-height:52vh;
+      min-height:220px;
+      border-radius:14px;
+    }
+
+    /* 移動は外側(.item)のtransformで行う */
+    .item{
+      position:absolute;
+      left:0; top:0;
+      transform: translate3d(0,0,0);
+      will-change: transform;
+      user-select:none;
+      -webkit-user-select:none;
+    }
+
+    /* 見た目（内側） */
+    .bubble{
+      width:72px;
+      height:72px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .bubble img{
+      width: 86%;
+      height: 86%;
+      object-fit: contain;
+      display:block;
+      pointer-events:none;
+    }
+
+    /* 出現アニメは内側だけ（scale/opacityのみ） */
+    .bubble.pop{
+      animation: popIn 420ms cubic-bezier(.2,1.2,.25,1) both;
+      animation-delay: var(--popDelay, 0ms);
+    }
+    @keyframes popIn{
+      0%{ transform: scale(.6); opacity:0; }
+      60%{ transform: scale(1.06); opacity:1; }
+      100%{ transform: scale(1); opacity:1; }
+    }
+
+    /* answer buttons */
+    .answers{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    .btn{
+      border:none;
+      border-radius:18px;
+      padding:16px 0;
+      font-size:26px;
+      font-weight:1000;
+      cursor:pointer;
+      user-select:none;
+      touch-action:manipulation;
+      background: rgba(255,255,255,.10);
+      color: var(--text);
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow: 0 18px 40px rgba(0,0,0,.18);
+      transform: translateZ(0);
+      transition: transform .08s ease, filter .08s ease, background .2s ease;
+    }
+    .btn:active{
+      transform: scale(.98);
+      filter: brightness(1.1);
+    }
+    .btn.correct{
+      background: rgba(124,255,178,.18);
+      border-color: rgba(124,255,178,.45);
+      box-shadow: 0 0 0 2px rgba(124,255,178,.10) inset, 0 18px 40px rgba(0,0,0,.18);
+    }
+    .btn.wrong{
+      background: rgba(255,122,122,.16);
+      border-color: rgba(255,122,122,.45);
+    }
+    .shake{ animation: shake 420ms ease-in-out 1; }
+    @keyframes shake{
+      0%{ transform: translateX(0); }
+      25%{ transform: translateX(-6px); }
+      50%{ transform: translateX(6px); }
+      75%{ transform: translateX(-4px); }
+      100%{ transform: translateX(0); }
+    }
+
+    .statusRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      align-items:center;
+      margin-top:14px;
+    }
+    .status{
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:14px;
+      font-weight:900;
+      min-width: 260px;
+      text-align:center;
+    }
+    .status.ok{ border-color: rgba(124,255,178,.35); }
+    .status.ng{ border-color: rgba(255,122,122,.35); }
+
+    .toolsRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-top:10px;
+    }
+    .miniBtn{
+      border:none;
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:13px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+      touch-action:manipulation;
+      background: rgba(255,255,255,.10);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.16);
+    }
+    .miniBtn.primary{
+      background: rgba(255,213,74,.18);
+      border-color: rgba(255,213,74,.45);
+      color:#221400;
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      font-size:13px;
+      font-weight:900;
+    }
+    .toggle input{ transform:scale(1.2); }
+
+    .footerTip{
+      margin-top:10px;
+      font-size:12px;
+      opacity:.86;
+      text-align:center;
+      line-height:1.45;
+    }
+
+    @media (max-width:720px){
+      .stage{ min-height:240px; }
+      .items{ height:300px; }
+      .bubble{ width:68px; height:68px; }
+      .btn{ padding:15px 0; font-size:26px; }
+      .status{ min-width: 220px; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="fx"></canvas>
+
+  <div class="wrap">
+    <div class="titleRow">
+      <h1>🔢 かずをかぞえよう（1〜9）</h1>
+      <div class="pillRow">
+        <div class="pill">レベル：<b><span id="level">1</span></b></div>
+        <div class="pill">れんぞく：<b><span id="streak">0</span></b> / つぎLvまで：<b><span id="toNext">5</span></b></div>
+        <div class="pill">さいこう：<b><span id="best">0</span></b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="prompt">
+        いくつ あるかな？
+        <small>でてきた え を ぜんぶ かぞえて、したの すうじ を えらんでね</small>
+      </div>
+
+      <div class="stage" aria-label="数えるもののステージ">
+        <div class="items" id="items" aria-live="polite"></div>
+      </div>
+
+      <div class="answers" id="answers" aria-label="答えのボタン"></div>
+
+      <div class="statusRow">
+        <div class="status" id="status">スタート！</div>
+      </div>
+
+      <div class="toolsRow">
+        <button class="miniBtn primary" id="btnNext">つぎへ</button>
+        <button class="miniBtn" id="btnReset">さいしょから</button>
+
+        <label class="toggle" title="iPadは最初のタップで音/読み上げが有効になります（仕様）">
+          <input id="soundToggle" type="checkbox" checked>
+          おと ON
+        </label>
+
+        <label class="toggle" title="正解した時に数字を読み上げます">
+          <input id="speakToggle" type="checkbox" checked>
+          よみあげ ON
+        </label>
+
+        <button class="miniBtn" id="btnTheme">え を いれかえ</button>
+      </div>
+
+      <div class="footerTip">
+        iPadのコツ：Safari → 共有 →「ホーム画面に追加」でアプリみたいに使えます。<br>
+        ※音/読み上げが出ないときは、サイレント解除＆音量確認をお願いします。
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============================
+  // 設定
+  // ============================
+  const MIN = 1, MAX = 9;
+  const LEVEL_UP_STREAK = 5; // 5問連続正解ごとにレベルアップ
+
+  // ★画像の置き場所（指定フォルダ）
+  const IMAGE_DIR = "assets/items/";
+  // ★画像一覧（GitHub Pages対策：フォルダ列挙ができないため manifest が必要）
+  const MANIFEST_URL = IMAGE_DIR + "manifest.json";
+
+  // ============================
+  // 状態
+  // ============================
+  let answer = 1;
+  let streak = 0;
+  let best = Number(localStorage.getItem("count_game_best") || "0");
+
+  let level = Number(localStorage.getItem("count_game_level") || "1");
+  if(!Number.isFinite(level) || level < 1) level = 1;
+
+  let locked = false;
+
+  // 自由移動用
+  let movers = [];   // {el, x, y, vx, vy, size}
+  let animId = null;
+  let lastT = 0;
+
+  // 画像プール（manifestから読み込む）
+  let imagePool = []; // ["apple.png", "cat.png", ...]
+  let poolReady = false;
+
+  // ============================
+  // DOM
+  // ============================
+  const itemsEl = document.getElementById("items");
+  const answersEl = document.getElementById("answers");
+  const statusEl = document.getElementById("status");
+  const streakEl = document.getElementById("streak");
+  const bestEl = document.getElementById("best");
+  const levelEl = document.getElementById("level");
+  const toNextEl = document.getElementById("toNext");
+
+  const btnNext = document.getElementById("btnNext");
+  const btnReset = document.getElementById("btnReset");
+  const btnTheme = document.getElementById("btnTheme");
+
+  const soundToggle = document.getElementById("soundToggle");
+  const speakToggle = document.getElementById("speakToggle");
+
+  bestEl.textContent = best;
+
+  // ============================
+  // ユーティリティ
+  // ============================
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function setStatus(text, kind=""){
+    statusEl.textContent = text;
+    statusEl.classList.remove("ok","ng");
+    if(kind) statusEl.classList.add(kind);
+  }
+
+  function updateScore(){
+    streakEl.textContent = streak;
+
+    if(streak > best){
+      best = streak;
+      bestEl.textContent = best;
+      localStorage.setItem("count_game_best", String(best));
+    }
+
+    const rem = LEVEL_UP_STREAK - (streak % LEVEL_UP_STREAK);
+    toNextEl.textContent = (rem === 0 ? 0 : rem);
+  }
+
+  function applyLevel(){
+    levelEl.textContent = level;
+    localStorage.setItem("count_game_level", String(level));
+  }
+
+  function resetGameToStart(message = "さいしょから やろう！"){
+    streak = 0;
+    level = 1;
+    applyLevel();
+    updateScore();
+    setStatus(message, "ng");
+    stopMotion();
+    setTimeout(() => newRound(), 700);
+  }
+
+  // ============================
+  // manifest 読み込み
+  // ============================
+  async function loadManifest(){
+    try{
+      // キャッシュが強い環境向けに軽くバージョン付与（必要なら）
+      const url = MANIFEST_URL + "?v=" + (localStorage.getItem("count_manifest_v") || "1");
+      const res = await fetch(url, { cache: "no-store" });
+      if(!res.ok) throw new Error("manifest fetch failed: " + res.status);
+      const data = await res.json();
+      const list = Array.isArray(data.images) ? data.images : [];
+      imagePool = list.filter(x => typeof x === "string" && x.trim().length > 0);
+      poolReady = imagePool.length > 0;
+
+      if(!poolReady){
+        setStatus("画像一覧が空です（manifest.json を確認）", "ng");
+      }
+    }catch(e){
+      console.error(e);
+      poolReady = false;
+      setStatus("画像読み込み失敗（manifest.json が必要）", "ng");
+    }
+  }
+
+  // ============================
+  // 音（WebAudio）
+  // ============================
+  let audioCtx = null;
+  function ctx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  async function ensureAudio(){
+    if(!soundToggle.checked) return;
+    try{
+      const c = ctx();
+      if(c.state === "suspended") await c.resume();
+    }catch(e){}
+  }
+  function tone(freq, t0, dur, type="sine", gain=0.12){
+    const c = ctx();
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.value = 0.0001;
+    o.connect(g); g.connect(c.destination);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+  function playOk(){
+    if(!soundToggle.checked) return;
+    const c = ctx();
+    const t = c.currentTime;
+    tone(660, t, .12, "triangle", .14);
+    tone(880, t + .10, .14, "triangle", .12);
+    tone(1100, t + .20, .18, "sine", .10);
+  }
+  function playNg(){
+    if(!soundToggle.checked) return;
+    const c = ctx();
+    const t = c.currentTime;
+    tone(220, t, .18, "square", .10);
+    tone(170, t + .08, .22, "square", .08);
+  }
+  function playLevelUp(){
+    if(!soundToggle.checked) return;
+    const c = ctx();
+    const t = c.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f,i)=> tone(f, t + i*0.08, .14, "triangle", .12));
+    tone(1318.5, t + 0.34, .22, "sine", .10);
+  }
+
+  // ============================
+  // 読み上げ（Web Speech API）
+  // ============================
+  const jpNums = ["", "いち", "に", "さん", "よん", "ご", "ろく", "なな", "はち", "きゅう"];
+  function speakNumber(n){
+    if(!speakToggle.checked) return;
+    if(!("speechSynthesis" in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      const ut = new SpeechSynthesisUtterance(jpNums[n] || String(n));
+      ut.lang = "ja-JP";
+      ut.rate = 0.9;
+      ut.pitch = 1.1;
+      ut.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices?.() || [];
+      const ja = voices.find(v => (v.lang || "").toLowerCase().startsWith("ja"));
+      if(ja) ut.voice = ja;
+      window.speechSynthesis.speak(ut);
+    }catch(e){
+      console.warn("speak failed", e);
+    }
+  }
+  if("speechSynthesis" in window){
+    window.speechSynthesis.getVoices?.();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices?.();
+  }
+
+  // ============================
+  // キラキラFX（Canvas）
+  // ============================
+  const fx = document.getElementById("fx");
+  const cx2 = fx.getContext("2d");
+  const particles = [];
+  function resizeFX(){
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    fx.width = Math.floor(innerWidth * dpr);
+    fx.height = Math.floor(innerHeight * dpr);
+    fx.style.width = innerWidth + "px";
+    fx.style.height = innerHeight + "px";
+    cx2.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener("resize", resizeFX, {passive:true});
+  resizeFX();
+
+  function spawnConfetti(n=120){
+    for(let i=0;i<n;i++){
+      particles.push({
+        x: innerWidth*0.5 + rand(-20, 20),
+        y: innerHeight*0.25 + rand(-10, 10),
+        vx: rand(-5.5, 5.5),
+        vy: rand(-8.5, -2.0),
+        g: 0.12,
+        r: rand(2.5, 4.5),
+        a: 1,
+        life: rand(40, 90),
+        col: ["#ffd54a","#7CFFB2","#5ad8ff","#ff7bd1","#b48cff","#ffffff"][Math.floor(Math.random()*6)]
+      });
+    }
+  }
+  function fxLoop(){
+    cx2.clearRect(0,0,innerWidth,innerHeight);
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += p.g;
+      p.life -= 1; p.a *= 0.985;
+      cx2.globalAlpha = Math.max(0, Math.min(1, p.a));
+      cx2.fillStyle = p.col;
+      cx2.beginPath();
+      cx2.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      cx2.fill();
+      if(p.life <= 0 || p.y > innerHeight + 60) particles.splice(i,1);
+    }
+    requestAnimationFrame(fxLoop);
+  }
+  requestAnimationFrame(fxLoop);
+
+  // ============================
+  // 回答ボタン
+  // ============================
+  function renderAnswers(){
+    answersEl.innerHTML = "";
+    for(let n=1;n<=9;n++){
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = n;
+      b.setAttribute("aria-label", `${n} をえらぶ`);
+      b.addEventListener("click", () => choose(n, b));
+      answersEl.appendChild(b);
+    }
+  }
+
+  // ============================
+  // ランダム配置（重なり軽減）
+  // ============================
+  function placeRandomly(count, size, w, h){
+    const poses = [];
+    const minDist = size * 0.92;
+    const maxTry = 140;
+
+    for(let i=0;i<count;i++){
+      let x=0, y=0, ok=false;
+      for(let t=0;t<maxTry;t++){
+        x = rand(0, Math.max(0, w - size));
+        y = rand(0, Math.max(0, h - size));
+        ok = true;
+        for(const p of poses){
+          const dx = p.x - x;
+          const dy = p.y - y;
+          if(Math.hypot(dx,dy) < minDist){ ok=false; break; }
+        }
+        if(ok) break;
+      }
+      poses.push({x,y});
+    }
+    return poses;
+  }
+
+  // ============================
+  // 自由移動：ステージ内バウンド（レベル2以上）
+  // ============================
+  function stopMotion(){
+    if(animId){
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+    movers = [];
+    lastT = 0;
+  }
+
+  function getBubbleSize(){
+    return window.matchMedia("(max-width:720px)").matches ? 68 : 72;
+  }
+
+  function startMotion(){
+    stopMotion();
+    if(level < 2) return;
+
+    const w = itemsEl.clientWidth;
+    const h = itemsEl.clientHeight;
+
+    const bubbleSize = getBubbleSize();
+    const baseSpeed = 70 + (level - 2) * 18;
+
+    movers = [...itemsEl.querySelectorAll(".item")].map(el => {
+      const x = Number(el.dataset.x || 0);
+      const y = Number(el.dataset.y || 0);
+      const ang = rand(0, Math.PI*2);
+      const sp = baseSpeed + rand(-12, 22);
+      return {
+        el, x, y,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp,
+        size: bubbleSize
+      };
+    });
+
+    function tick(t){
+      if(!lastT) lastT = t;
+      const dt = Math.min(0.033, (t - lastT) / 1000);
+      lastT = t;
+
+      const wanderDegPerSec = 20 + Math.min(24, (level-2)*5);
+      const wr = (wanderDegPerSec * Math.PI/180) * dt;
+
+      const maxX0 = Math.max(0, w);
+      const maxY0 = Math.max(0, h);
+
+      for(const m of movers){
+        const rot = rand(-wr, wr);
+        const cos = Math.cos(rot), sin = Math.sin(rot);
+        const nvx = m.vx * cos - m.vy * sin;
+        const nvy = m.vx * sin + m.vy * cos;
+        m.vx = nvx; m.vy = nvy;
+
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+
+        const maxX = Math.max(0, maxX0 - m.size);
+        const maxY = Math.max(0, maxY0 - m.size);
+
+        if(m.x < 0){ m.x = 0; m.vx *= -1; }
+        if(m.x > maxX){ m.x = maxX; m.vx *= -1; }
+        if(m.y < 0){ m.y = 0; m.vy *= -1; }
+        if(m.y > maxY){ m.y = maxY; m.vy *= -1; }
+
+        m.el.style.transform = `translate3d(${m.x}px, ${m.y}px, 0)`;
+        m.el.dataset.x = String(m.x);
+        m.el.dataset.y = String(m.y);
+      }
+
+      animId = requestAnimationFrame(tick);
+    }
+
+    animId = requestAnimationFrame(tick);
+  }
+
+  // ============================
+  // 画像を重複なしで選ぶ
+  // ============================
+  function pickUniqueImages(k){
+    const pool = imagePool.slice();
+    shuffle(pool);
+    return pool.slice(0, k).map(name => IMAGE_DIR + name);
+  }
+
+  // ============================
+  // ラウンド生成
+  // ============================
+  async function newRound(){
+    locked = false;
+    setStatus("いくつ あるかな？");
+    applyLevel();
+
+    if(!poolReady){
+      await loadManifest();
+      if(!poolReady){
+        // manifestが読めない場合はここで停止
+        return;
+      }
+    }
+
+    // 画像枚数が少ない場合、重複なしを守るためMAXを縮める
+    const maxSafe = Math.max(MIN, Math.min(MAX, imagePool.length));
+    const ansMax = maxSafe; // 1..maxSafe
+    answer = Math.floor(Math.random() * (ansMax - MIN + 1)) + MIN;
+
+    stopMotion();
+
+    const w = itemsEl.clientWidth;
+    const h = itemsEl.clientHeight;
+    if(w === 0 || h === 0){
+      requestAnimationFrame(() => newRound());
+      return;
+    }
+
+    itemsEl.innerHTML = "";
+
+    const size = getBubbleSize();
+    const poses = placeRandomly(answer, size, w, h);
+
+    // ★ここが要件：毎回、複数種類を重複なく使う
+    const selected = pickUniqueImages(answer);
+
+    for(let i=0;i<answer;i++){
+      const wrapper = document.createElement("div");
+      wrapper.className = "item";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble pop";
+      bubble.style.setProperty("--popDelay", (i * 22) + "ms");
+
+      const img = document.createElement("img");
+      img.alt = "かぞえる え";
+      img.loading = "eager"; // すぐ出す
+      img.src = selected[i];
+
+      // 画像がない/パス間違いでも落ちないように
+      img.onerror = () => {
+        img.remove();
+        bubble.textContent = "？";
+        bubble.style.fontSize = "34px";
+      };
+
+      const x = poses[i].x;
+      const y = poses[i].y;
+
+      wrapper.dataset.x = String(x);
+      wrapper.dataset.y = String(y);
+      wrapper.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+      bubble.appendChild(img);
+      wrapper.appendChild(bubble);
+      itemsEl.appendChild(wrapper);
+    }
+
+    renderAnswers();
+    updateScore();
+
+    // レベル2以上：自由移動
+    startMotion();
+  }
+
+  function levelUp(){
+    level++;
+    applyLevel();
+    setStatus(`レベルアップ！ Lv.${level} 🎉`, "ok");
+    spawnConfetti(180);
+    playLevelUp();
+  }
+
+  // ============================
+  // 選択処理
+  // ============================
+  async function choose(n, btn){
+    if(locked) return;
+    locked = true;
+
+    await ensureAudio();
+
+    if(n === answer){
+      btn.classList.add("correct");
+      speakNumber(n);
+
+      streak++;
+      updateScore();
+      setStatus("せいかい！すごい！ 🎉", "ok");
+      spawnConfetti(120);
+      playOk();
+
+      if(streak > 0 && streak % LEVEL_UP_STREAK === 0){
+        setTimeout(() => {
+          levelUp();
+          setTimeout(() => newRound(), 850);
+        }, 550);
+      }else{
+        setTimeout(() => newRound(), 950);
+      }
+    }else{
+      btn.classList.add("wrong");
+      btn.classList.add("shake");
+      setTimeout(()=> btn.classList.remove("shake"), 450);
+
+      playNg();
+      resetGameToStart("まちがえた！さいしょ（Lv1）から やろう 🙂");
+    }
+  }
+
+  // ============================
+  // 操作
+  // ============================
+  btnNext.addEventListener("click", () => newRound());
+
+  btnReset.addEventListener("click", () => {
+    resetGameToStart("さいしょから やろう！");
+  });
+
+  // 「え を いれかえ」＝次の問題（画像も変わります）
+  btnTheme.addEventListener("click", async () => {
+    setStatus("え を いれかえたよ！");
+    await newRound();
+  });
+
+  addEventListener("resize", () => {
+    stopMotion();
+    setTimeout(() => newRound(), 120);
+  }, {passive:true});
+
+  // 初期化
+  (async function init(){
+    applyLevel();
+    updateScore();
+    setStatus("スタート！");
+    await loadManifest();
+    requestAnimationFrame(() => newRound());
+  })();
+</script>
+</body>
+</html>
