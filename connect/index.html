@@ -1,79 +1,62 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>てんつなぎ</title>
+
 <style>
-  :root{
-    --bg:#0b1538;
-    --card:#ffffff;
-    --text:#ffffff;
-    --sample:#ff3b3b;
-    --draw:#00d2ff;
-  }
-  *{ box-sizing:border-box; }
-  body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    display:flex;
-    justify-content:center;
-  }
-  .wrap{
-    width:min(460px, 96vw);
-    padding:12px;
-  }
-  h1{
-    margin:6px 0 10px;
-    font-size:18px;
-    text-align:center;
-    font-weight:1000;
-  }
-  .card{
-    background:var(--card);
-    border-radius:12px;
-    padding:10px;
-    margin-bottom:10px;
-    position:relative;
-    z-index:2; /* ★上に */
-  }
-  canvas{
-    display:block;       /* ★重要：ズレ防止 */
-    width:100%;
-    aspect-ratio: 1 / 1;
-    touch-action:none;   /* ★スクロールに奪われない */
-  }
-  .row{
-    display:flex;
-    gap:10px;
-    justify-content:center;
-    margin:8px 0 0;
-  }
-  button{
-    border:none;
-    border-radius:14px;
-    padding:12px 16px;
-    font-size:16px;
-    font-weight:1000;
-    cursor:pointer;
-  }
-  .primary{ background:#ffd54a; color:#221400; }
-  .sub{ background:rgba(255,255,255,.15); color:#fff; }
-  .status{
-    text-align:center;
-    font-weight:1000;
-    margin-top:8px;
-    min-height:1.6em;
-  }
-  .debug{
-    text-align:center;
-    font-size:12px;
-    opacity:.85;
-    margin-top:6px;
-    word-break:break-all;
-  }
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  background:#0b1538;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+}
+.wrap{
+  width:min(460px, 96vw);
+  padding:12px;
+}
+h1{
+  font-size:18px;
+  text-align:center;
+  font-weight:1000;
+  margin:6px 0 10px;
+}
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:10px;
+}
+canvas{
+  display:block;
+  width:100%;
+  aspect-ratio:1/1;
+  touch-action:none;
+}
+.row{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+button{
+  border:none;
+  border-radius:14px;
+  padding:12px 18px;
+  font-size:16px;
+  font-weight:1000;
+  cursor:pointer;
+}
+.primary{ background:#ffd54a; color:#221400; }
+.sub{ background:rgba(255,255,255,.15); color:#fff; }
+.status{
+  margin-top:8px;
+  text-align:center;
+  font-weight:1000;
+  min-height:1.6em;
+}
 </style>
 </head>
 
@@ -94,250 +77,217 @@
     <button class="sub" id="clearBtn">けす</button>
   </div>
 
-  <div class="status" id="status">読み込み中…</div>
-  <div class="debug" id="debug">debug: -</div>
+  <div class="status" id="status">おてほんをみて なぞってね</div>
 </div>
 
 <script>
-(() => {
-  const GRID = 5;
-  const DOT_R = 6;
-  const HIT_R = 22;
+/* =========================
+   基本設定
+========================= */
+const GRID = 5;
+const DOT_R = 6;
+const HIT_R = 22;
 
-  const statusEl = document.getElementById("status");
-  const debugEl  = document.getElementById("debug");
-  const sample = document.getElementById("sample");
-  const play   = document.getElementById("play");
-  const sctx = sample.getContext("2d");
-  const pctx = play.getContext("2d");
+/* 正規化座標 */
+function dotPos(i,j){
+  return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
+}
 
-  // ★JSが動いているか即わかる
-  statusEl.textContent = "スタート！ おてほんをみて なぞってね";
-  debugEl.textContent = "debug: JS OK / " + navigator.userAgent;
+/* 問題 */
+const problems = [
+  { answer:[20,21,22,23,24,19,14,9,8,7,12,17,16,15,10,5,6,11] }
+];
+let current = 0;
 
-  // ★エラーが出たら画面に表示
-  window.addEventListener("error", (e) => {
-    statusEl.textContent = "エラー: " + (e.message || "unknown");
-    debugEl.textContent = "debug: " + (e.filename || "") + ":" + (e.lineno || "");
-  });
+/* Canvas */
+const sample = document.getElementById("sample");
+const play   = document.getElementById("play");
+const sctx = sample.getContext("2d");
+const pctx = play.getContext("2d");
+const statusEl = document.getElementById("status");
 
-  function dotPos(i,j){
-    return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
-  }
-
-  // 問題（点ID: i*GRID+j）
-  const problems = [
-    { name:"おうち", answer:[20,21,22,23,24,19,14,9,8,7,12,17,16,15,10,5,6,11] },
-    { name:"しかく", answer:[6,7,8,13,18,17,16,11,6] }
-  ];
-  let current = 0;
-
-  function resizeCanvas(c){
-    const w = Math.max(1, Math.floor(c.getBoundingClientRect().width));
-    c.width = w;
-    c.height = w;
-  }
-
-  function drawDots(ctx){
-    ctx.fillStyle="#444";
-    for(let i=0;i<GRID;i++){
-      for(let j=0;j<GRID;j++){
-        const p = dotPos(i,j);
-        ctx.beginPath();
-        ctx.arc(p.x*ctx.canvas.width, p.y*ctx.canvas.height, DOT_R, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-  }
-
-  function drawSample(){
-    resizeCanvas(sample);
-    sctx.clearRect(0,0,sample.width,sample.height);
-    drawDots(sctx);
-
-    const a = problems[current].answer;
-    sctx.strokeStyle="red";
-    sctx.lineWidth=4;
-    sctx.lineJoin="round";
-    sctx.lineCap="round";
-    sctx.beginPath();
-    a.forEach((id,k)=>{
-      const i = Math.floor(id/GRID);
-      const j = id % GRID;
-      const p = dotPos(i,j);
-      const x = p.x*sample.width;
-      const y = p.y*sample.height;
-      if(k===0) sctx.moveTo(x,y);
-      else sctx.lineTo(x,y);
-    });
-    sctx.stroke();
-  }
-
-  let path = [];
-  let drawing = false;
-  let lastId = null;
-
-  function drawPlay(){
-    resizeCanvas(play);
-    pctx.clearRect(0,0,play.width,play.height);
-    drawDots(pctx);
-
-    if(path.length>0){
-      pctx.strokeStyle="#00d2ff";
-      pctx.lineWidth=4;
-      pctx.lineJoin="round";
-      pctx.lineCap="round";
-      pctx.beginPath();
-      path.forEach((id,k)=>{
-        const i = Math.floor(id/GRID);
-        const j = id % GRID;
-        const p = dotPos(i,j);
-        const x = p.x*play.width;
-        const y = p.y*play.height;
-        if(k===0) pctx.moveTo(x,y);
-        else pctx.lineTo(x,y);
-      });
-      pctx.stroke();
-    }
-  }
-
-  function getLocalXY(clientX, clientY){
-    const r = play.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
-  }
-
-  function hitTest(x,y){
-    let hit = null;
-    let best = 1e9;
-    for(let i=0;i<GRID;i++){
-      for(let j=0;j<GRID;j++){
-        const id = i*GRID + j;
-        const p = dotPos(i,j);
-        const px = p.x*play.width;
-        const py = p.y*play.height;
-        const d = Math.hypot(x-px, y-py);
-        if(d < HIT_R && d < best){
-          best = d;
-          hit = id;
-        }
-      }
-    }
-    return hit;
-  }
-
-  function addPoint(id){
-    if(id==null) return;
-    if(path.length===0){
-      path.push(id);
-      lastId = id;
-      drawPlay();
-      return;
-    }
-    if(lastId !== id){
-      path.push(id);
-      lastId = id;
-      drawPlay();
-    }
-  }
-
-  function startDraw(clientX, clientY){
-    drawing = true;
-    path = [];
-    lastId = null;
-    statusEl.textContent = "なぞってるよ…（できた！で判定）";
-
-    const {x,y} = getLocalXY(clientX, clientY);
-    addPoint(hitTest(x,y));
-  }
-
-  function moveDraw(clientX, clientY){
-    if(!drawing) return;
-    const {x,y} = getLocalXY(clientX, clientY);
-    addPoint(hitTest(x,y));
-  }
-
-  function endDraw(){
-    drawing = false;
-  }
-
-  // ★イベント：Pointer / Mouse / Touch 全対応（どれか必ず来る）
-  play.addEventListener("pointerdown", (e)=>{
-    e.preventDefault();
-    play.setPointerCapture?.(e.pointerId);
-    startDraw(e.clientX, e.clientY);
-  });
-  play.addEventListener("pointermove", (e)=>{
-    e.preventDefault();
-    moveDraw(e.clientX, e.clientY);
-  });
-  play.addEventListener("pointerup", (e)=>{
-    e.preventDefault();
-    endDraw();
-  });
-  play.addEventListener("pointercancel", endDraw);
-
-  play.addEventListener("mousedown", (e)=>{
-    e.preventDefault();
-    startDraw(e.clientX, e.clientY);
-  });
-  window.addEventListener("mousemove", (e)=> moveDraw(e.clientX, e.clientY));
-  window.addEventListener("mouseup", endDraw);
-
-  play.addEventListener("touchstart", (e)=>{
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    startDraw(t.clientX, t.clientY);
-  }, {passive:false});
-  play.addEventListener("touchmove", (e)=>{
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    moveDraw(t.clientX, t.clientY);
-  }, {passive:false});
-  play.addEventListener("touchend", (e)=>{
-    e.preventDefault();
-    endDraw();
-  }, {passive:false});
-
-  function isCorrect(){
-    const ans = problems[current].answer;
-    if(path.length !== ans.length) return false;
-    for(let i=0;i<ans.length;i++){
-      if(path[i] !== ans[i]) return false;
-    }
-    return true;
-  }
-
-  document.getElementById("doneBtn").addEventListener("click", ()=>{
-    if(path.length === 0){
-      statusEl.textContent = "まずは なぞってね🙂";
-      return;
-    }
-    if(isCorrect()){
-      statusEl.textContent = "せいかい！🎉 つぎへ！";
-      current = (current + 1) % problems.length;
-      setTimeout(()=>{
-        path = [];
-        lastId = null;
-        drawSample();
-        drawPlay();
-        statusEl.textContent = "スタート！ おてほんをみて なぞってね";
-      }, 700);
-    }else{
-      statusEl.textContent = "ちがうよ。もういちど！（けす でやりなおし）";
-    }
-  });
-
-  document.getElementById("clearBtn").addEventListener("click", ()=>{
-    path = [];
-    lastId = null;
-    drawPlay();
-    statusEl.textContent = "スタート！ おてほんをみて なぞってね";
-  });
-
-  // 初期描画
+function resize(c){
+  const w = c.getBoundingClientRect().width;
+  c.width = w;
+  c.height = w;
+}
+function resizeAll(){
+  resize(sample);
+  resize(play);
   drawSample();
   drawPlay();
-})();
+}
+window.addEventListener("resize", resizeAll);
+resizeAll();
+
+/* 点描画 */
+function drawDots(ctx){
+  ctx.fillStyle="#444";
+  for(let i=0;i<GRID;i++){
+    for(let j=0;j<GRID;j++){
+      const p = dotPos(i,j);
+      ctx.beginPath();
+      ctx.arc(p.x*ctx.canvas.width, p.y*ctx.canvas.height, DOT_R, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+/* お手本 */
+function drawSample(){
+  sctx.clearRect(0,0,sample.width,sample.height);
+  drawDots(sctx);
+  const a = problems[current].answer;
+  sctx.strokeStyle="red";
+  sctx.lineWidth=4;
+  sctx.beginPath();
+  a.forEach((id,k)=>{
+    const i = Math.floor(id/GRID);
+    const j = id%GRID;
+    const p = dotPos(i,j);
+    const x = p.x*sample.width;
+    const y = p.y*sample.height;
+    if(k===0) sctx.moveTo(x,y);
+    else sctx.lineTo(x,y);
+  });
+  sctx.stroke();
+}
+
+/* プレイ */
+let path = [];
+let drawing=false;
+let lastId=null;
+
+function drawPlay(){
+  pctx.clearRect(0,0,play.width,play.height);
+  drawDots(pctx);
+  if(path.length){
+    pctx.strokeStyle="#00d2ff";
+    pctx.lineWidth=4;
+    pctx.beginPath();
+    path.forEach((id,k)=>{
+      const i=Math.floor(id/GRID);
+      const j=id%GRID;
+      const p=dotPos(i,j);
+      const x=p.x*play.width;
+      const y=p.y*play.height;
+      if(k===0) pctx.moveTo(x,y);
+      else pctx.lineTo(x,y);
+    });
+    pctx.stroke();
+  }
+}
+
+function hitTest(x,y){
+  let best=null, dist=1e9;
+  for(let i=0;i<GRID;i++){
+    for(let j=0;j<GRID;j++){
+      const id=i*GRID+j;
+      const p=dotPos(i,j);
+      const px=p.x*play.width;
+      const py=p.y*play.height;
+      const d=Math.hypot(x-px,y-py);
+      if(d<HIT_R && d<dist){ dist=d; best=id; }
+    }
+  }
+  return best;
+}
+
+function getXY(e){
+  const r=play.getBoundingClientRect();
+  return {x:e.clientX-r.left,y:e.clientY-r.top};
+}
+
+function addPoint(id){
+  if(id==null) return;
+  if(path.length===0 || path[path.length-1]!==id){
+    path.push(id);
+    drawPlay();
+  }
+}
+
+/* 入力 */
+play.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  drawing=true;
+  path=[];
+  const {x,y}=getXY(e);
+  addPoint(hitTest(x,y));
+});
+play.addEventListener("pointermove",e=>{
+  if(!drawing) return;
+  const {x,y}=getXY(e);
+  addPoint(hitTest(x,y));
+});
+window.addEventListener("pointerup",()=>drawing=false);
+
+/* =========================
+   ゆる判定（線分カバー）
+========================= */
+function segmentsFrom(ids){
+  const segs=[];
+  for(let i=0;i<ids.length-1;i++){
+    const a=ids[i], b=ids[i+1];
+    if(a!==b) segs.push([a,b]);
+  }
+  return segs;
+}
+
+function covers(segA, segB){
+  // segA が segB を覆うか
+  const p=idToXY(segA[0]);
+  const q=idToXY(segA[1]);
+  const r=idToXY(segB[0]);
+  const s=idToXY(segB[1]);
+
+  // 同一直線判定（外積≈0）
+  const cross = (q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
+  if(Math.abs(cross)>1e-3) return false;
+
+  // 投影で区間重なり確認
+  const t = (v)=>( (v.x-p.x)*(q.x-p.x)+(v.y-p.y)*(q.y-p.y) );
+  const pq=t(q);
+  const r1=t(r), r2=t(s);
+  return Math.min(r1,r2)<=pq && Math.max(r1,r2)>=0;
+}
+
+function idToXY(id){
+  const i=Math.floor(id/GRID);
+  const j=id%GRID;
+  const p=dotPos(i,j);
+  return {x:p.x,y:p.y};
+}
+
+function isCorrect(){
+  const ansSegs=segmentsFrom(problems[current].answer);
+  const playSegs=segmentsFrom(path);
+
+  return ansSegs.every(aSeg =>
+    playSegs.some(pSeg => covers(pSeg, aSeg))
+  );
+}
+
+/* 判定 */
+document.getElementById("doneBtn").onclick=()=>{
+  if(path.length<2){
+    statusEl.textContent="なぞってね🙂";
+    return;
+  }
+  if(isCorrect()){
+    statusEl.textContent="せいかい！🎉";
+  }else{
+    statusEl.textContent="ちがうよ。もういちど！";
+  }
+};
+document.getElementById("clearBtn").onclick=()=>{
+  path=[];
+  drawPlay();
+  statusEl.textContent="おてほんをみて なぞってね";
+};
+
+drawSample();
+drawPlay();
 </script>
 </body>
 </html>
+``
