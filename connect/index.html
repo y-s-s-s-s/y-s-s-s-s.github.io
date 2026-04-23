@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>てんつなぎ（自動生成・複数線OK）</title>
+<title>てんつなぎ（自動生成・直線補完）</title>
 
 <style>
   :root{
@@ -14,12 +14,11 @@
     --dot:#3e4452;
     --sample:#ff3b3b;
     --draw:#00d2ff;
+    --preview:rgba(0,210,255,.35);
     --accent:#ffd54a;
     --shadow:0 18px 60px rgba(0,0,0,.45);
   }
-
   *{ box-sizing:border-box; }
-
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -36,7 +35,6 @@
     overscroll-behavior:none;
   }
 
-  /* 右上もどる */
   .backBtn{
     position:fixed;
     top:10px;
@@ -61,7 +59,6 @@
   .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
 
   .wrap{ width:min(520px, 96vw); }
-
   h1{
     margin:6px 0 10px;
     font-size:18px;
@@ -69,7 +66,6 @@
     text-align:center;
     letter-spacing:.02em;
   }
-
   .card{
     background:var(--card);
     border-radius:12px;
@@ -77,7 +73,6 @@
     margin-bottom:10px;
     box-shadow: var(--shadow);
   }
-
   canvas{
     display:block;
     width:100%;
@@ -86,7 +81,6 @@
     user-select:none;
     -webkit-user-select:none;
   }
-
   .row{
     display:flex;
     gap:10px;
@@ -94,7 +88,6 @@
     flex-wrap:wrap;
     margin-top:6px;
   }
-
   button{
     border:none;
     border-radius:14px;
@@ -107,7 +100,6 @@
   }
   .primary{ background:var(--accent); color:#221400; }
   .sub{ background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.22); }
-
   .status{
     margin-top:10px;
     text-align:center;
@@ -125,7 +117,7 @@
 </head>
 
 <body>
-  <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
+  <a class="backBtn" href="../index.html">← もどる</a>
 
   <div class="wrap">
     <h1>てんつなぎ（自動生成）</h1>
@@ -184,7 +176,7 @@
   });
 
   /* ======================
-     座標系
+     座標系（正規化）
   ====================== */
   function dotPos(i,j){
     return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
@@ -222,7 +214,7 @@
 
   /* ======================
      問題自動生成（自己交差OK）
-     ランダムウォーク：それっぽい線になる＆交差も自然に起きる
+     ランダムウォーク
   ====================== */
   function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
 
@@ -237,11 +229,36 @@
     return cand;
   }
 
-  function compressIds(ids){
+  function compressSeq(ids){
     const out = [];
     for(const v of ids){
       if(out.length===0 || out[out.length-1]!==v) out.push(v);
     }
+    return out;
+  }
+
+  // 3点が同一直線（正規化座標で外積≈0）
+  function collinear(a,b,c,eps=1e-12){
+    const abx = b.x-a.x, aby=b.y-a.y;
+    const bcx = c.x-b.x, bcy=c.y-b.y;
+    const cross = abx*bcy - aby*bcx;
+    return Math.abs(cross) < eps;
+  }
+
+  // 同一直線が続く中間点を削って「長い直線」にまとめる
+  function compressCollinearIds(ids){
+    const clean = compressSeq(ids);
+    if(clean.length <= 2) return clean;
+
+    const out = [clean[0]];
+    for(let i=1;i<clean.length-1;i++){
+      const a = idToNorm(out[out.length-1]);
+      const b = idToNorm(clean[i]);
+      const c = idToNorm(clean[i+1]);
+      if(collinear(a,b,c)) continue; // bは直線上の中間点 → 省略
+      out.push(clean[i]);
+    }
+    out.push(clean[clean.length-1]);
     return out;
   }
 
@@ -254,7 +271,7 @@
       cur = ns[randInt(0, ns.length-1)];
       path.push(cur);
     }
-    const out = compressIds(path);
+    const out = compressSeq(path);
     return out.length >= 2 ? out : generateProblem();
   }
 
@@ -263,8 +280,13 @@
   /* ======================
      描画
   ====================== */
+  function cssVar(name, fallback){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+    return (v && v.trim()) ? v.trim() : fallback;
+  }
+
   function drawDots(ctx){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--dot") || "#444";
+    ctx.fillStyle = cssVar("--dot", "#444");
     for(let i=0;i<GRID;i++){
       for(let j=0;j<GRID;j++){
         const p = dotPos(i,j);
@@ -289,37 +311,48 @@
     ctx.stroke();
   }
 
+  function idsToCanvasPts(ids, canvas){
+    return ids.map(id => {
+      const p = idToNorm(id);
+      return { x:p.x*canvas.width, y:p.y*canvas.height };
+    });
+  }
+
   function drawSample(){
     sctx.clearRect(0,0,sample.width,sample.height);
     drawDots(sctx);
-    const pts = answer.map(id => {
-      const p = idToNorm(id);
-      return { x:p.x*sample.width, y:p.y*sample.height };
-    });
-    drawPolyline(sctx, pts, getComputedStyle(document.documentElement).getPropertyValue("--sample") || "red", 4);
+    const pts = idsToCanvasPts(answer, sample);
+    drawPolyline(sctx, pts, cssVar("--sample","red"), 4);
   }
 
   /* ======================
-     プレイ：複数ストローク対応
-     strokes = [{drawPts:[{x,y}...], hitIds:[id...]}, ...]
+     プレイ：複数ストローク
+     - 描いてる最中はフリーハンド（preview）
+     - 指を離したら点と点を結ぶ直線（snapLine）に変換して確定
   ====================== */
+  // 確定ストローク配列：
+  // { ids: [点ID...](圧縮済み), pts: [{x,y}...](点中心へスナップした直線用) }
   let strokes = [];
-  let currentStroke = null;
+
+  // 現在描画中（フリーハンド表示用）
   let drawing = false;
+  let previewPts = [];      // フリーハンド軌跡（表示用）
+  let currentHitIds = [];   // 点ヒット（確定用）
   let events = 0;
 
   function drawPlay(){
     pctx.clearRect(0,0,play.width,play.height);
     drawDots(pctx);
 
-    const color = getComputedStyle(document.documentElement).getPropertyValue("--draw") || "#00d2ff";
-
-    // すべてのストロークを描く（ここが「複数線OK」）
+    // 確定済みストロークは「直線補完済み（点中心へスナップ）」で描く
+    const color = cssVar("--draw","#00d2ff");
     for(const st of strokes){
-      drawPolyline(pctx, st.drawPts, color, 4);
+      drawPolyline(pctx, st.pts, color, 4);
     }
-    if(currentStroke){
-      drawPolyline(pctx, currentStroke.drawPts, color, 4);
+
+    // 描いてる最中は薄いプレビュー（フリーハンド）
+    if(drawing && previewPts.length > 1){
+      drawPolyline(pctx, previewPts, cssVar("--preview","rgba(0,210,255,.35)"), 4);
     }
   }
 
@@ -346,34 +379,48 @@
     return best;
   }
 
-  function pushHit(list, id){
+  function pushHit(id){
     if(id==null) return;
-    if(list.length===0 || list[list.length-1]!==id) list.push(id);
+    if(currentHitIds.length===0 || currentHitIds[currentHitIds.length-1]!==id){
+      currentHitIds.push(id);
+    }
+  }
+
+  // ストローク確定：点列→直線補完（点中心へスナップ）
+  function finalizeStroke(){
+    // 連続重複除去→同一直線の中間点除去（長い直線にまとめる）
+    const ids = compressCollinearIds(currentHitIds);
+
+    // 点を2つ以上拾えていないと「直線」が作れないので、捨てる（プレビューだけ）
+    if(ids.length < 2) return;
+
+    const pts = idsToCanvasPts(ids, play);
+    strokes.push({ ids, pts });
   }
 
   function onStart(clientX, clientY, src){
     drawing = true;
-    currentStroke = { drawPts:[], hitIds:[] };
+    previewPts = [];
+    currentHitIds = [];
 
     const p = clientToCanvasXY(clientX, clientY);
-    currentStroke.drawPts.push(p);
-    pushHit(currentStroke.hitIds, hitTest(p.x, p.y));
+    previewPts.push(p);
+    pushHit(hitTest(p.x, p.y));
 
     events++;
-    setStatus("なぞってるよ…（何本でもOK）");
-    setDebug(`debug: ${src} start / events=${events} / strokes=${strokes.length+1}`);
+    setStatus("なぞってるよ…（離すと直線になるよ）");
+    setDebug(`debug: ${src} start / events=${events} / strokes=${strokes.length}`);
     drawPlay();
   }
 
   function onMove(clientX, clientY, src){
-    if(!drawing || !currentStroke) return;
-
+    if(!drawing) return;
     const p = clientToCanvasXY(clientX, clientY);
-    currentStroke.drawPts.push(p);
-    pushHit(currentStroke.hitIds, hitTest(p.x, p.y));
+    previewPts.push(p);
+    pushHit(hitTest(p.x, p.y));
 
     events++;
-    setDebug(`debug: ${src} move / events=${events} / hits(last)=${currentStroke.hitIds.length}`);
+    setDebug(`debug: ${src} move / events=${events} / hits=${currentHitIds.length}`);
     drawPlay();
   }
 
@@ -381,14 +428,9 @@
     if(!drawing) return;
     drawing = false;
 
-    // ストローク確定（点を2つ以上拾えていなくても、描画は残してOK）
-    if(currentStroke){
-      // 超短いタップ誤爆は捨てる（必要なら）
-      if(currentStroke.drawPts.length >= 2){
-        strokes.push(currentStroke);
-      }
-      currentStroke = null;
-    }
+    finalizeStroke();     // ★ここで直線補完して確定
+    previewPts = [];
+    currentHitIds = [];
 
     events++;
     setDebug(`debug: ${src} end / events=${events} / strokes=${strokes.length}`);
@@ -450,8 +492,8 @@
   }, {passive:false});
 
   /* ======================
-     判定：長い直線でまとめてOK（線分カバー）
-     - 複数ストロークは「線分集合」を合算して評価
+     判定：長い直線OK（線分カバー）
+     ※確定ストローク(strokes[].ids)のみを使って判定（見た目と一致）
   ====================== */
   function segments(ids){
     const segs=[];
@@ -484,31 +526,22 @@
     const minRS = Math.min(r1,r2);
     const maxRS = Math.max(r1,r2);
 
-    // お手本区間がプレイヤー区間の投影レンジで覆われていればOK
     return (minRS <= pq + 1e-6) && (maxRS >= 0 - 1e-6);
   }
 
   function allPlayerSegments(){
-    // 全ストロークのhitIdsから線分を集める
     const segs = [];
     for(const st of strokes){
-      const ids = compressIds(st.hitIds);
-      segs.push(...segments(ids));
-    }
-    // 描画中のストロークも含めたい場合（通常は確定後で十分）
-    if(currentStroke){
-      const ids = compressIds(currentStroke.hitIds);
-      segs.push(...segments(ids));
+      segs.push(...segments(st.ids));
     }
     return segs;
   }
 
   function isCorrect(){
-    const ansSegs = segments(compressIds(answer));
+    const ansSegs = segments(compressCollinearIds(answer)); // お手本も直線まとめてOK
     const mySegs  = allPlayerSegments();
     if(mySegs.length === 0) return false;
 
-    // お手本の各線分が、プレイヤーのいずれかの線分でカバーされればOK
     return ansSegs.every(a => mySegs.some(p => covers(p,a)));
   }
 
@@ -517,19 +550,20 @@
   ====================== */
   function clearAll(msg="おてほんをみて なぞってね（何本でもOK）"){
     strokes = [];
-    currentStroke = null;
     drawing = false;
+    previewPts = [];
+    currentHitIds = [];
     drawPlay();
     setStatus(msg);
     setDebug(`debug: cleared / strokes=${strokes.length}`);
   }
 
   doneBtn.addEventListener("click", ()=>{
-    // 描画中なら一旦確定（指を離さずに押すケース対策）
+    // 描画中なら確定してから判定（押しっぱなし誤操作対策）
     if(drawing) onEnd("force");
 
     if(strokes.length === 0){
-      setStatus("まずは なぞってね🙂（何本でもOK）");
+      setStatus("まずは なぞってね🙂（線を引いてから「できた！」）");
       return;
     }
 
