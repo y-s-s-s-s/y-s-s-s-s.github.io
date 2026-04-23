@@ -22,6 +22,32 @@
       overflow:hidden;
     }
 
+    /* =========================
+       ★ 右上「もどる」ボタン（../index.html）
+       ========================= */
+    .backBtn{
+      position:fixed;
+      top:10px;
+      right:10px;
+      z-index:60;
+      text-decoration:none;
+      font-size:13px;
+      font-weight:900;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.25);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.3);
+      user-select:none;
+      touch-action:manipulation;
+    }
+    .backBtn:active{
+      transform: scale(.97);
+      filter: brightness(1.1);
+    }
+
     /* FX Canvas */
     #fx{
       position:fixed; inset:0;
@@ -342,6 +368,9 @@
 </head>
 
 <body>
+  <!-- ★ 右上固定：もどる（../index.html へ） -->
+  <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
+
   <canvas id="fx"></canvas>
 
   <div class="wrap">
