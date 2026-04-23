@@ -11,14 +11,10 @@
       --stroke:rgba(255,255,255,.16);
       --text:#f2f5ff;
       --muted:rgba(255,255,255,.72);
-      --card:rgba(255,255,255,.08);
       --shadow:0 18px 60px rgba(0,0,0,.45);
       --ok:#7CFFB2;
       --ng:#ff7a7a;
       --accent:#ffd54a;
-      --wood1:#c58a4b;
-      --wood2:#9a6533;
-      --metal:#d8dee9;
     }
     *{ box-sizing:border-box; }
     body{
@@ -34,7 +30,7 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:18px 0 26px;
+      padding:12px 0 16px; /* 省スペース */
       overflow:hidden;
     }
 
@@ -50,30 +46,24 @@
       z-index:10;
     }
 
+    /* 上部も少しだけ圧縮 */
     .titleRow{
       display:flex;
       align-items:flex-end;
       justify-content:space-between;
-      gap:12px;
-      margin:0 0 10px;
+      gap:10px;
+      margin:0 0 8px;
       flex-wrap:wrap;
     }
     h1{
       margin:0;
       font-weight:1000;
       letter-spacing:.02em;
-      font-size:18px;
+      font-size:16px; /* 小さめ */
       display:flex;
       align-items:center;
-      gap:10px;
+      gap:8px;
       line-height:1.2;
-    }
-    .sub{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-      margin-top:4px;
-      line-height:1.45;
     }
 
     .pillRow{
@@ -86,7 +76,7 @@
     .pill{
       font-size:12px;
       font-weight:900;
-      padding:7px 10px;
+      padding:6px 10px;
       border-radius:999px;
       background:rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.14);
@@ -95,88 +85,50 @@
     }
     .pill b{ color:var(--accent); }
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.06));
-      border:1px solid var(--stroke);
-      border-radius:20px;
-      padding:16px;
-      box-shadow: var(--shadow);
-      position:relative;
-      overflow:hidden;
-    }
-    .card::before{
-      content:"";
-      position:absolute; inset:-60% -40%;
-      background: conic-gradient(from 180deg, transparent, rgba(255,255,255,.08), transparent 40%);
-      animation: sheen 9s linear infinite;
-      opacity:.35;
-      pointer-events:none;
-    }
-    @keyframes sheen{
-      0%{ transform:rotate(0deg) translateZ(0); }
-      100%{ transform:rotate(360deg) translateZ(0); }
-    }
-    .card > *{ position:relative; }
-
-    .prompt{
-      text-align:center;
-      font-weight:1000;
-      font-size:20px;
-      line-height:1.25;
-      padding:10px 10px 6px;
-    }
-    .prompt small{
-      display:block;
-      font-weight:800;
-      font-size:13px;
-      opacity:.9;
-      margin-top:6px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    /* Seesaw area */
+    /* ステージ：余白を減らす */
     .stage{
-      margin-top:10px;
+      margin-top:8px;
       background:rgba(0,0,0,.20);
       border:1px solid rgba(255,255,255,.14);
-      border-radius:18px;
-      padding:14px;
+      border-radius:16px;
+      padding:10px;
     }
 
-    /* ★横3個×縦1行 */
+    /* ===== シーソー：基本は横3つ ===== */
     .seesawGrid{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
-      gap:14px;
+      gap:10px;
       align-items:stretch;
     }
 
-    /* 画面が狭いときだけ折り返し（iPadは基本3列のまま） */
+    /* ★スマホ：縦積みではなく “横スクロール1行” にして縦を節約 */
     @media (max-width: 860px){
-      .seesawGrid{ grid-template-columns: 1fr; }
+      .seesawGrid{
+        grid-template-columns: repeat(3, minmax(190px, 1fr));
+        overflow-x:auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom:6px; /* スクロールバー分 */
+        scroll-snap-type: x mandatory;
+      }
+      .seesaw{ scroll-snap-align: start; }
     }
 
     .seesaw{
-      border-radius:16px;
+      border-radius:14px;
       background: rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.12);
-      padding:12px 12px 14px;
+      padding:10px 10px 10px;
       position:relative;
       overflow:hidden;
-      min-height: 210px;
+      min-height: 170px; /* 省スペース */
     }
-    .seesawLabel{
-      font-size:12px;
-      font-weight:900;
-      opacity:.85;
-      margin:0 0 8px;
-      color:var(--muted);
-    }
+    /* 「シーソー1/2/3」は削除：要素自体を作らないが、念のため非表示 */
+    .seesawLabel{ display:none !important; }
 
     .rig{
       position:relative;
-      height:160px;
+      height:130px; /* 省スペース */
       display:flex;
       align-items:center;
       justify-content:center;
@@ -185,18 +137,18 @@
     /* fulcrum */
     .fulcrum{
       position:absolute;
-      bottom:18px;
+      bottom:14px;
       width:0; height:0;
-      border-left:26px solid transparent;
-      border-right:26px solid transparent;
-      border-bottom:42px solid rgba(216,222,233,.35);
+      border-left:22px solid transparent;
+      border-right:22px solid transparent;
+      border-bottom:36px solid rgba(216,222,233,.35);
       filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
     }
     .base{
       position:absolute;
-      bottom:8px;
-      width:220px;
-      height:10px;
+      bottom:6px;
+      width:180px;
+      height:9px;
       border-radius:999px;
       background: rgba(0,0,0,.25);
       border:1px solid rgba(255,255,255,.10);
@@ -205,23 +157,23 @@
     /* beam */
     .beam{
       position:absolute;
-      bottom:56px;
-      width:min(520px, 92%);
-      height:14px;
+      bottom:48px;
+      width:min(420px, 92%);
+      height:12px;
       border-radius:999px;
       background: linear-gradient(180deg, rgba(197,138,75,.95), rgba(154,101,51,.95));
       border:1px solid rgba(255,255,255,.10);
       transform-origin: 50% 50%;
       box-shadow: 0 10px 26px rgba(0,0,0,.28);
-      transition: transform 300ms ease;
+      transition: transform 260ms ease;
     }
 
-    /* platforms */
+    /* platforms（小さく） */
     .platform{
       position:absolute;
-      width:86px;
-      height:56px;
-      border-radius:16px;
+      width:72px;
+      height:48px;
+      border-radius:14px;
       background: rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.14);
       box-shadow: 0 10px 24px rgba(0,0,0,.22);
@@ -232,42 +184,42 @@
       backdrop-filter: blur(8px);
     }
     .platform img{
-      width:82%;
-      height:82%;
+      width:84%;
+      height:84%;
       object-fit:contain;
       display:block;
       pointer-events:none;
     }
     .fallbackEmoji{
-      font-size:30px;
+      font-size:28px;
       line-height:1;
       font-weight:900;
       opacity:.95;
       pointer-events:none;
     }
 
-    .platform.left{ left: calc(50% - min(250px, 44%) ); }
-    .platform.right{ right: calc(50% - min(250px, 44%) ); }
+    .platform.left{ left: calc(50% - min(210px, 44%) ); }
+    .platform.right{ right: calc(50% - min(210px, 44%) ); }
 
     /* tilt states */
     .tilt-left  .beam{ transform: rotate(-7deg); }
     .tilt-right .beam{ transform: rotate( 7deg); }
-    .tilt-left  .platform.left { transform: translateY(10px); }
-    .tilt-left  .platform.right{ transform: translateY(-10px); }
-    .tilt-right .platform.left { transform: translateY(-10px); }
-    .tilt-right .platform.right{ transform: translateY(10px); }
+    .tilt-left  .platform.left { transform: translateY(8px); }
+    .tilt-left  .platform.right{ transform: translateY(-8px); }
+    .tilt-right .platform.left { transform: translateY(-8px); }
+    .tilt-right .platform.right{ transform: translateY(8px); }
 
-    /* Answer choices */
+    /* Answer choices：縦を減らす */
     .choices{
       display:grid;
       grid-template-columns: repeat(4, 1fr);
-      gap:12px;
-      margin-top:12px;
+      gap:10px;
+      margin-top:10px;
     }
     .choiceBtn{
       border:none;
-      border-radius:18px;
-      padding:12px 10px;
+      border-radius:16px;
+      padding:10px 8px;
       cursor:pointer;
       user-select:none;
       touch-action:manipulation;
@@ -281,7 +233,7 @@
       gap:8px;
       align-items:center;
       justify-content:center;
-      min-height:110px;
+      min-height:92px; /* 省スペース */
     }
     .choiceBtn:active{ transform: scale(.98); filter: brightness(1.1); }
     .choiceBtn.correct{
@@ -293,8 +245,8 @@
       border-color: rgba(255,122,122,.45);
     }
     .choiceThumb{
-      width:64px; height:64px;
-      border-radius:16px;
+      width:58px; height:58px;
+      border-radius:14px;
       background: rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.14);
       display:flex;
@@ -302,13 +254,10 @@
       justify-content:center;
       overflow:hidden;
     }
-    .choiceThumb img{ width:82%; height:82%; object-fit:contain; }
-    .choiceName{
-      font-size:12px;
-      font-weight:1000;
-      color: var(--muted);
-      letter-spacing:.08em;
-    }
+    .choiceThumb img{ width:84%; height:84%; object-fit:contain; }
+
+    /* 「A/B/C/D」の文字を削除：要素は作るが非表示でもOK（ここで確実に消す） */
+    .choiceName{ display:none !important; }
 
     .statusRow{
       display:flex;
@@ -316,16 +265,16 @@
       flex-wrap:wrap;
       justify-content:center;
       align-items:center;
-      margin-top:14px;
+      margin-top:10px;
     }
     .status{
-      padding:10px 12px;
+      padding:9px 10px;
       border-radius:14px;
       background:rgba(0,0,0,.18);
       border:1px solid rgba(255,255,255,.12);
       font-size:14px;
       font-weight:900;
-      min-width: 260px;
+      min-width: 240px;
       text-align:center;
     }
     .status.ok{ border-color: rgba(124,255,178,.35); }
@@ -336,11 +285,11 @@
       gap:10px;
       flex-wrap:wrap;
       justify-content:center;
-      margin-top:10px;
+      margin-top:8px;
     }
     .miniBtn{
       border:none;
-      padding:10px 12px;
+      padding:9px 11px;
       border-radius:14px;
       font-size:13px;
       font-weight:900;
@@ -358,28 +307,31 @@
     }
     .toggle{
       display:flex; align-items:center; gap:10px;
-      padding:10px 12px;
+      padding:9px 11px;
       border-radius:14px;
       background: rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.14);
       font-size:13px;
       font-weight:900;
     }
-    .toggle input{ transform:scale(1.2); }
+    .toggle input{ transform:scale(1.15); }
 
+    /* フッターもスマホは非表示（縦節約） */
     .footerTip{
-      margin-top:10px;
+      margin-top:8px;
       font-size:12px;
       opacity:.86;
       text-align:center;
       line-height:1.45;
-      color:var(--muted);
+      color:rgba(255,255,255,.72);
+    }
+    @media (max-width: 560px){
+      h1{ font-size:15px; }
+      .choices{ grid-template-columns: repeat(2, 1fr); }
+      .choiceBtn{ min-height:86px; }
+      .footerTip{ display:none; }
     }
 
-    @media (max-width:720px){
-      .choices{ grid-template-columns: repeat(2, 1fr); }
-      .choiceBtn{ min-height:104px; }
-    }
     @media (prefers-reduced-motion: reduce){
       .beam{ transition:none; }
       .choiceBtn{ transition:none; }
@@ -402,28 +354,27 @@
   </div>
 
   <div class="stage">
-      <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較（横3つ）"></div>
-    </div>
+    <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較（横3つ）"></div>
+  </div>
 
-    <div class="choices" id="choices" aria-label="答えの選択肢"></div>
+  <div class="choices" id="choices" aria-label="答えの選択肢"></div>
 
-    <div class="statusRow">
-      <div class="status" id="status">読み込み中...</div>
-    </div>
+  <div class="statusRow">
+    <div class="status" id="status">読み込み中...</div>
+  </div>
 
-    <div class="toolsRow">
-      <button class="miniBtn primary" id="btnNext">つぎの もんだい</button>
-      <button class="miniBtn" id="btnRetry">もういちど</button>
+  <div class="toolsRow">
+    <button class="miniBtn primary" id="btnNext">つぎの もんだい</button>
+    <button class="miniBtn" id="btnRetry">もういちど</button>
 
-      <label class="toggle" title="iPadは最初のタップで音が有効になります（仕様）">
-        <input id="soundToggle" type="checkbox" checked>
-        おと ON
-      </label>
-    </div>
+    <label class="toggle" title="iPadは最初のタップで音が有効になります（仕様）">
+      <input id="soundToggle" type="checkbox" checked>
+      おと ON
+    </label>
+  </div>
 
-    <div class="footerTip">
-      画像は <b>../count/assets/items/manifest.json</b> から読み込みます（重複なしで4種類ランダム）。
-    </div>
+  <div class="footerTip">
+    画像は <b>../count/assets/items/manifest.json</b> から読み込みます（重複なしで4種類ランダム）。
   </div>
 </div>
 
@@ -441,8 +392,8 @@ const MANIFEST_URL = IMAGE_DIR + "manifest.json";
    状態
    ============================ */
 const N = 4;
-let pool = [];              // ["a.png","b.png",...]
-let currentItems = [];      // [{id, name, img, fallback}]
+let pool = [];
+let currentItems = [];
 let weights = [1,2,3,4];
 let heaviestId = 0;
 let comparisons = [];
@@ -578,7 +529,6 @@ function shuffle(arr){
    ============================ */
 async function loadManifest(){
   try{
-    // GitHub Pages のキャッシュ対策（必要に応じて）
     const url = MANIFEST_URL + "?v=" + Date.now();
     const res = await fetch(url, { cache: "no-store" });
     if(!res.ok) throw new Error("manifest fetch failed: " + res.status);
@@ -599,7 +549,6 @@ async function loadManifest(){
 
 /* ============================
    論理：3比較から「一番重い」が一意に確定するセットを選ぶ
-   - 4アイテムの全順序（24通り）から検証
    ============================ */
 function allPermutations(arr){
   const res = [];
@@ -663,7 +612,6 @@ function chooseSolvableComparisonSet(w){
       }
     }
   }
-  // ランダム探索→全探索→保険（最重vs他3）
   for(let t=0;t<80;t++){
     const cand = sets[Math.floor(Math.random()*sets.length)];
     const cons = constraintsFromPairs(cand, w);
@@ -681,10 +629,10 @@ function chooseSolvableComparisonSet(w){
 /* ============================
    表示：画像ノード（失敗時フォールバック）
    ============================ */
-function createItemNode(item, mode){
+function createItemNode(item){
   const wrap = document.createElement("div");
   const img = document.createElement("img");
-  img.alt = item.name;
+  img.alt = item.alt || "";
   img.src = item.img;
   img.loading = "eager";
   img.onerror = () => {
@@ -703,17 +651,14 @@ function createItemNode(item, mode){
    ============================ */
 function renderSeesaws(){
   seesawGrid.innerHTML = "";
-  comparisons.forEach((c, idx) => {
+  comparisons.forEach((c) => {
     const a = currentItems[c.a];
     const b = currentItems[c.b];
 
     const box = document.createElement("div");
     box.className = "seesaw " + (c.tilt === "left" ? "tilt-left" : "tilt-right");
 
-    const label = document.createElement("div");
-    label.className = "seesawLabel";
-    label.textContent = `シーソー ${idx+1}`;
-    box.appendChild(label);
+    // ★「シーソー1/2/3」ラベルは作らない
 
     const rig = document.createElement("div");
     rig.className = "rig";
@@ -732,11 +677,11 @@ function renderSeesaws(){
 
     const left = document.createElement("div");
     left.className = "platform left";
-    left.appendChild(createItemNode(a, "platform"));
+    left.appendChild(createItemNode(a));
 
     const right = document.createElement("div");
     right.className = "platform right";
-    right.appendChild(createItemNode(b, "platform"));
+    right.appendChild(createItemNode(b));
 
     rig.appendChild(left);
     rig.appendChild(right);
@@ -754,17 +699,14 @@ function renderChoices(){
   currentItems.forEach(item => {
     const btn = document.createElement("button");
     btn.className = "choiceBtn";
-    btn.setAttribute("aria-label", `${item.name} をえらぶ`);
+    btn.setAttribute("aria-label", `えらぶ`);
 
     const thumb = document.createElement("div");
     thumb.className = "choiceThumb";
-    thumb.appendChild(createItemNode(item, "choice"));
+    thumb.appendChild(createItemNode(item));
     btn.appendChild(thumb);
 
-    const name = document.createElement("div");
-    name.className = "choiceName";
-    name.textContent = item.name;
-    btn.appendChild(name);
+    // ★A/B/C/D の文字は表示しない（.choiceName自体を作らない）
 
     btn.addEventListener("click", () => choose(item.id, btn));
     choicesEl.appendChild(btn);
@@ -780,15 +722,12 @@ function pickFourUniqueFromPool(){
   return list.slice(0, 4);
 }
 function buildItemsFromFiles(files){
-  // 表示名は A/B/C/D（シンプル）
-  const labels = ["A","B","C","D"];
   const fallbacks = ["🍎","🚗","⭐️","🐱"];
-
   return files.map((file, i) => ({
     id: i,
-    name: labels[i],
     img: IMAGE_DIR + file,
-    fallback: fallbacks[i]
+    fallback: fallbacks[i],
+    alt: "" // ラベルなし
   }));
 }
 
@@ -801,18 +740,15 @@ function newPuzzle(){
   locked = false;
   setStatus("どれが いちばん おもい？");
 
-  // 画像4種をランダム選択
   const files = pickFourUniqueFromPool();
   currentItems = buildItemsFromFiles(files);
 
-  // 1..4の重さをシャッフルして割り当て（全て異なる）
   const base = [1,2,3,4];
   shuffle(base);
   weights = base.slice();
 
   heaviestId = weights.indexOf(Math.max(...weights));
 
-  // 3比較セットを「一意に推理できる」ものから選ぶ
   const pairSet = chooseSolvableComparisonSet(weights);
 
   comparisons = pairSet.map(p => {
@@ -838,15 +774,15 @@ async function choose(id, btn){
     streak++;
     scoreEl.textContent = score;
     streakEl.textContent = streak;
-    setStatus("せいかい！🎉 つぎの もんだいへ！", "ok");
+    setStatus("せいかい！🎉", "ok");
     spawnConfetti(160);
     playOk();
-    setTimeout(() => newPuzzle(), 950);
+    setTimeout(() => newPuzzle(), 800);
   }else{
     btn.classList.add("wrong");
     streak = 0;
     streakEl.textContent = streak;
-    setStatus("ざんねん！もういちど かんがえてみよう🙂", "ng");
+    setStatus("ざんねん！もういちど🙂", "ng");
     playNg();
     setTimeout(() => { locked = false; }, 520);
   }
@@ -859,7 +795,6 @@ btnNext.addEventListener("click", () => newPuzzle());
 btnRetry.addEventListener("click", () => {
   locked = false;
   setStatus("もういちど！どれが いちばん おもい？");
-  // 問題は同じまま再挑戦（作り直したいなら newPuzzle()）
 });
 
 /* ============================
@@ -871,7 +806,7 @@ btnRetry.addEventListener("click", () => {
   setStatus("画像を読み込み中...");
   await loadManifest();
   if(pool.length >= 4){
-    setTimeout(() => newPuzzle(), 150);
+    setTimeout(() => newPuzzle(), 120);
   }
 })();
 </script>
