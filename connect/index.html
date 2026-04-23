@@ -15,14 +15,13 @@ body{
   justify-content:center;
 }
 .wrap{
-  width:min(460px, 96vw);
+  width:min(460px,96vw);
   padding:12px;
 }
 h1{
-  font-size:18px;
   text-align:center;
+  font-size:18px;
   font-weight:1000;
-  margin:6px 0 10px;
 }
 .card{
   background:#fff;
@@ -47,14 +46,13 @@ button{
   padding:12px 18px;
   font-size:16px;
   font-weight:1000;
-  cursor:pointer;
 }
 .primary{ background:#ffd54a; color:#221400; }
 .sub{ background:rgba(255,255,255,.15); color:#fff; }
 .status{
-  margin-top:8px;
   text-align:center;
   font-weight:1000;
+  margin-top:8px;
   min-height:1.6em;
 }
 </style>
@@ -81,14 +79,14 @@ button{
 </div>
 
 <script>
-/* =========================
+/* =====================
    基本設定
-========================= */
+===================== */
 const GRID = 5;
 const DOT_R = 6;
-const HIT_R = 22;
+const HIT_R = 24;
 
-/* 正規化座標 */
+/* 正規化点座標 */
 function dotPos(i,j){
   return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
 }
@@ -140,44 +138,56 @@ function drawSample(){
   const a = problems[current].answer;
   sctx.strokeStyle="red";
   sctx.lineWidth=4;
+  sctx.lineJoin="round";
   sctx.beginPath();
   a.forEach((id,k)=>{
-    const i = Math.floor(id/GRID);
-    const j = id%GRID;
-    const p = dotPos(i,j);
-    const x = p.x*sample.width;
-    const y = p.y*sample.height;
+    const i=Math.floor(id/GRID);
+    const j=id%GRID;
+    const p=dotPos(i,j);
+    const x=p.x*sample.width;
+    const y=p.y*sample.height;
     if(k===0) sctx.moveTo(x,y);
     else sctx.lineTo(x,y);
   });
   sctx.stroke();
 }
 
-/* プレイ */
-let path = [];
+/* =====================
+   プレイ側
+===================== */
+
+/* 描画用：指の軌跡 */
+let drawPoints = [];
+
+/* 判定用：拾った点 */
+let hitPoints = [];
+
 let drawing=false;
-let lastId=null;
 
 function drawPlay(){
   pctx.clearRect(0,0,play.width,play.height);
   drawDots(pctx);
-  if(path.length){
+
+  if(drawPoints.length){
     pctx.strokeStyle="#00d2ff";
     pctx.lineWidth=4;
+    pctx.lineJoin="round";
+    pctx.lineCap="round";
     pctx.beginPath();
-    path.forEach((id,k)=>{
-      const i=Math.floor(id/GRID);
-      const j=id%GRID;
-      const p=dotPos(i,j);
-      const x=p.x*play.width;
-      const y=p.y*play.height;
-      if(k===0) pctx.moveTo(x,y);
-      else pctx.lineTo(x,y);
+    drawPoints.forEach((p,i)=>{
+      if(i===0) pctx.moveTo(p.x,p.y);
+      else pctx.lineTo(p.x,p.y);
     });
     pctx.stroke();
   }
 }
 
+function getXY(e){
+  const r = play.getBoundingClientRect();
+  return { x:e.clientX-r.left, y:e.clientY-r.top };
+}
+
+/* 点ヒット判定 */
 function hitTest(x,y){
   let best=null, dist=1e9;
   for(let i=0;i<GRID;i++){
@@ -187,89 +197,83 @@ function hitTest(x,y){
       const px=p.x*play.width;
       const py=p.y*play.height;
       const d=Math.hypot(x-px,y-py);
-      if(d<HIT_R && d<dist){ dist=d; best=id; }
+      if(d<HIT_R && d<dist){
+        dist=d;
+        best=id;
+      }
     }
   }
   return best;
-}
-
-function getXY(e){
-  const r=play.getBoundingClientRect();
-  return {x:e.clientX-r.left,y:e.clientY-r.top};
-}
-
-function addPoint(id){
-  if(id==null) return;
-  if(path.length===0 || path[path.length-1]!==id){
-    path.push(id);
-    drawPlay();
-  }
 }
 
 /* 入力 */
 play.addEventListener("pointerdown",e=>{
   e.preventDefault();
   drawing=true;
-  path=[];
+  drawPoints=[];
+  hitPoints=[];
+  statusEl.textContent="なぞってるよ…";
   const {x,y}=getXY(e);
-  addPoint(hitTest(x,y));
+  drawPoints.push({x,y});
+  const id=hitTest(x,y);
+  if(id!=null) hitPoints.push(id);
+  drawPlay();
 });
+
 play.addEventListener("pointermove",e=>{
   if(!drawing) return;
   const {x,y}=getXY(e);
-  addPoint(hitTest(x,y));
+  drawPoints.push({x,y});
+  const id=hitTest(x,y);
+  if(id!=null && hitPoints[hitPoints.length-1]!==id){
+    hitPoints.push(id);
+  }
+  drawPlay();
 });
+
 window.addEventListener("pointerup",()=>drawing=false);
 
-/* =========================
+/* =====================
    ゆる判定（線分カバー）
-========================= */
+===================== */
 function segmentsFrom(ids){
-  const segs=[];
+  const out=[];
   for(let i=0;i<ids.length-1;i++){
     const a=ids[i], b=ids[i+1];
-    if(a!==b) segs.push([a,b]);
+    if(a!==b) out.push([a,b]);
   }
-  return segs;
+  return out;
 }
-
-function covers(segA, segB){
-  // segA が segB を覆うか
-  const p=idToXY(segA[0]);
-  const q=idToXY(segA[1]);
-  const r=idToXY(segB[0]);
-  const s=idToXY(segB[1]);
-
-  // 同一直線判定（外積≈0）
-  const cross = (q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
-  if(Math.abs(cross)>1e-3) return false;
-
-  // 投影で区間重なり確認
-  const t = (v)=>( (v.x-p.x)*(q.x-p.x)+(v.y-p.y)*(q.y-p.y) );
-  const pq=t(q);
-  const r1=t(r), r2=t(s);
-  return Math.min(r1,r2)<=pq && Math.max(r1,r2)>=0;
-}
-
 function idToXY(id){
   const i=Math.floor(id/GRID);
   const j=id%GRID;
   const p=dotPos(i,j);
   return {x:p.x,y:p.y};
 }
+function covers(segA, segB){
+  const p=idToXY(segA[0]);
+  const q=idToXY(segA[1]);
+  const r=idToXY(segB[0]);
+  const s=idToXY(segB[1]);
+
+  const cross=(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
+  if(Math.abs(cross)>1e-3) return false;
+
+  const dot=v=>((v.x-p.x)*(q.x-p.x)+(v.y-p.y)*(q.y-p.y));
+  const pq=dot(q);
+  const r1=dot(r), r2=dot(s);
+  return Math.min(r1,r2)<=pq && Math.max(r1,r2)>=0;
+}
 
 function isCorrect(){
   const ansSegs=segmentsFrom(problems[current].answer);
-  const playSegs=segmentsFrom(path);
-
-  return ansSegs.every(aSeg =>
-    playSegs.some(pSeg => covers(pSeg, aSeg))
-  );
+  const playSegs=segmentsFrom(hitPoints);
+  return ansSegs.every(a=>playSegs.some(p=>covers(p,a)));
 }
 
 /* 判定 */
 document.getElementById("doneBtn").onclick=()=>{
-  if(path.length<2){
+  if(drawPoints.length<2){
     statusEl.textContent="なぞってね🙂";
     return;
   }
@@ -280,7 +284,8 @@ document.getElementById("doneBtn").onclick=()=>{
   }
 };
 document.getElementById("clearBtn").onclick=()=>{
-  path=[];
+  drawPoints=[];
+  hitPoints=[];
   drawPlay();
   statusEl.textContent="おてほんをみて なぞってね";
 };
@@ -290,4 +295,3 @@ drawPlay();
 </script>
 </body>
 </html>
-``
