@@ -14,8 +14,8 @@
     --dot:#3e4452;
     --sample:#ff3b3b;
 
-    --draw:#00d2ff;            /* 確定線（濃い水色） */
-    --preview:rgba(0,210,255,.35); /* 描画中プレビュー（薄い水色） */
+    --draw:#00d2ff;                 /* 確定線（濃い水色） */
+    --preview:rgba(0,210,255,.35);  /* 描画中プレビュー（薄い水色） */
 
     --accent:#ffd54a;
     --shadow:0 18px 60px rgba(0,0,0,.45);
@@ -35,15 +35,25 @@
     min-height:100svh;
     display:flex;
     justify-content:center;
-    padding:12px;
+    padding:8px; /* ★省スペース（12→8） */
     overscroll-behavior:none;
+  }
+
+  /* ★花吹雪用Canvas（クリックを邪魔しない） */
+  #fx{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    pointer-events:none;
+    z-index:40;
   }
 
   /* 右上もどる */
   .backBtn{
     position:fixed;
-    top:10px;
-    right:10px;
+    top:8px;
+    right:8px;
     z-index:999;
     text-decoration:none;
     font-size:13px;
@@ -63,10 +73,12 @@
   }
   .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
 
-  .wrap{ width:min(520px, 96vw); }
+  .wrap{
+    width:min(520px, 96vw);
+  }
 
   h1{
-    margin:6px 0 10px;
+    margin:4px 0 8px; /* ★省スペース */
     font-size:18px;
     font-weight:1000;
     text-align:center;
@@ -76,8 +88,8 @@
   .card{
     background:var(--card);
     border-radius:12px;
-    padding:10px;
-    margin-bottom:10px;
+    padding:7px;        /* ★省スペース（10→7） */
+    margin-bottom:8px;  /* ★省スペース（10→8） */
     box-shadow: var(--shadow);
   }
 
@@ -95,13 +107,13 @@
     gap:10px;
     justify-content:center;
     flex-wrap:wrap;
-    margin-top:6px;
+    margin-top:4px; /* ★省スペース */
   }
 
   button{
     border:none;
     border-radius:14px;
-    padding:12px 16px;
+    padding:11px 16px; /* ★少しだけ省スペース */
     font-size:16px;
     font-weight:1000;
     cursor:pointer;
@@ -112,7 +124,7 @@
   .sub{ background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.22); }
 
   .status{
-    margin-top:10px;
+    margin-top:8px;
     text-align:center;
     font-weight:1000;
     min-height:1.6em;
@@ -124,11 +136,18 @@
     opacity:.86;
     line-height:1.4;
   }
+
+  @media (max-width:420px){
+    body{ padding:6px; }
+    .card{ padding:6px; margin-bottom:7px; }
+    button{ padding:10px 14px; }
+  }
 </style>
 </head>
 
 <body>
   <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
+  <canvas id="fx"></canvas>
 
   <div class="wrap">
     <h1>てんつなぎ（自動生成）</h1>
@@ -189,6 +208,93 @@
   window.addEventListener("error", (e) => {
     setStatus("エラー: " + (e.message || "unknown"));
   });
+
+  /* ======================
+     正解音（WebAudio）
+  ====================== */
+  let audioCtx = null;
+  function ctx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  async function ensureAudio(){
+    try{
+      const c = ctx();
+      if(c.state === "suspended") await c.resume();
+    }catch(e){}
+  }
+  function tone(freq, t0, dur, type="triangle", gain=0.12){
+    const c = ctx();
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.value = 0.0001;
+    o.connect(g); g.connect(c.destination);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+  function playOk(){
+    const c = ctx();
+    const t = c.currentTime;
+    tone(660, t, .10, "triangle", .14);
+    tone(880, t + .10, .12, "triangle", .12);
+    tone(1100, t + .22, .14, "sine", .10);
+  }
+
+  /* ======================
+     花吹雪（Canvas）
+  ====================== */
+  const fx = document.getElementById("fx");
+  const fxCtx = fx.getContext("2d");
+  const confetti = [];
+  function resizeFX(){
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    fx.width = Math.floor(innerWidth * dpr);
+    fx.height = Math.floor(innerHeight * dpr);
+    fx.style.width = innerWidth + "px";
+    fx.style.height = innerHeight + "px";
+    fxCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener("resize", resizeFX, {passive:true});
+  resizeFX();
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function spawnConfetti(n=160){
+    const cols = ["#ffd54a","#7CFFB2","#5ad8ff","#ff7bd1","#b48cff","#ffffff"];
+    for(let i=0;i<n;i++){
+      confetti.push({
+        x: innerWidth*0.5 + rand(-60,60),
+        y: innerHeight*0.22 + rand(-30,30),
+        vx: rand(-6,6),
+        vy: rand(-10,-3),
+        g: 0.14,
+        r: rand(2.2,4.6),
+        a: 1,
+        life: rand(45, 95),
+        col: cols[(Math.random()*cols.length)|0]
+      });
+    }
+  }
+  function fxLoop(){
+    fxCtx.clearRect(0,0,innerWidth,innerHeight);
+    for(let i=confetti.length-1;i>=0;i--){
+      const p = confetti[i];
+      p.x += p.vx; p.y += p.vy; p.vy += p.g;
+      p.life -= 1; p.a *= 0.985;
+      fxCtx.globalAlpha = Math.max(0, Math.min(1, p.a));
+      fxCtx.fillStyle = p.col;
+      fxCtx.beginPath();
+      fxCtx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      fxCtx.fill();
+      if(p.life <= 0 || p.y > innerHeight + 80) confetti.splice(i,1);
+    }
+    requestAnimationFrame(fxLoop);
+  }
+  requestAnimationFrame(fxLoop);
 
   /* ======================
      座標（正規化）
@@ -260,7 +366,7 @@
     return Math.abs(cross) < eps;
   }
 
-  // 中間点を削って長い直線へ（長い直線OKが自然に）
+  // 中間点を削って長い直線へ
   function compressCollinearIds(ids){
     const clean = compressSeq(ids);
     if(clean.length <= 2) return clean;
@@ -337,14 +443,14 @@
 
   /* ======================
      プレイ：複数ストローク
-     - 描いている最中：フリーハンド（薄い線）
+     - 描画中：フリーハンド（薄い線）
      - 離した瞬間：点→点の直線（濃い線）に確定
   ====================== */
   let strokes = []; // { ids:[], pts:[{x,y}...] }
 
   let drawing = false;
-  let rawPts = [];         // フリーハンド軌跡（描画用＆離した瞬間の解析用）
-  let currentIds = [];     // move中にも拾うが、最終的には rawPts から再抽出して確定する
+  let rawPts = [];         // フリーハンド軌跡
+  let currentIds = [];     // move中拾い（最終確定はrawPtsから再抽出）
 
   function drawPlay(){
     pctx.clearRect(0,0,play.width,play.height);
@@ -389,11 +495,11 @@
     if(arr.length===0 || arr[arr.length-1]!==id) arr.push(id);
   }
 
-  // ★離した瞬間：rawPts全体から点列を抽出して確定（取りこぼし対策のキモ）
+  // rawPts全体から点列抽出（取りこぼし対策）
   function extractIdsFromRaw(raw){
     const ids = [];
 
-    // 途中点抽出：近い点を拾う
+    // 途中点：近い点を拾う
     for(const p of raw){
       const {id, dist} = nearestDotId(p.x, p.y);
       if(dist <= HIT_R){
@@ -401,7 +507,7 @@
       }
     }
 
-    // 開始点/終了点の強制スナップ（HIT_R外でも拾えるように）
+    // 開始点/終了点の強制スナップ
     if(raw.length){
       const first = raw[0];
       const last  = raw[raw.length-1];
@@ -411,12 +517,10 @@
 
       if(a.dist <= FORCE_SNAP_R){
         ids.unshift(a.id);
-        // 先頭の連続重複を整理
         while(ids.length>=2 && ids[0]===ids[1]) ids.shift();
       }
       if(b.dist <= FORCE_SNAP_R){
         ids.push(b.id);
-        // 末尾の連続重複を整理
         while(ids.length>=2 && ids[ids.length-1]===ids[ids.length-2]) ids.pop();
       }
     }
@@ -426,8 +530,6 @@
 
   function finalizeStroke(){
     const ids = extractIdsFromRaw(rawPts);
-
-    // 点が2つ未満なら直線化できないので確定しない
     if(ids.length < 2) return false;
 
     const pts = idsToCanvasPts(ids, play);
@@ -443,11 +545,9 @@
     const p = clientToCanvasXY(clientX, clientY);
     rawPts.push(p);
 
-    // move中拾い（なくてもOKだがデバッグ的に残す）
     const n = nearestDotId(p.x,p.y);
     if(n.dist <= HIT_R) pushUnique(currentIds, n.id);
 
-    setStatus("なぞってるよ…（離すと直線になるよ）");
     drawPlay();
   }
 
@@ -469,22 +569,22 @@
 
     const ok = finalizeStroke();
 
-    // ★ここが要望：離した瞬間に「直線」に変わる（プレビューを消して確定線のみ表示）
+    // プレビューを消し、確定線のみ表示
     rawPts = [];
     currentIds = [];
-
     drawPlay();
 
     if(ok){
-      setStatus("直線にしたよ！ つづけて かいてOK（できた！で判定）");
+      setStatus("いいね！直線にしたよ。つづけて描いてOK（できた！で判定）");
     }else{
       setStatus("点の近くをなぞってね（離すと直線になるよ）");
     }
   }
 
-  /* 入力：Pointer + Touch + Mouse（安定優先） */
-  play.addEventListener("pointerdown", (e)=>{
+  /* 入力：Pointer + Touch + Mouse */
+  play.addEventListener("pointerdown", async (e)=>{
     e.preventDefault();
+    await ensureAudio(); // ★最初の操作で音が有効になるように
     try{ play.setPointerCapture?.(e.pointerId); }catch(_){}
     onStart(e.clientX, e.clientY);
   }, {passive:false});
@@ -505,8 +605,9 @@
   }, {passive:false});
 
   // touch fallback
-  play.addEventListener("touchstart", (e)=>{
+  play.addEventListener("touchstart", async (e)=>{
     e.preventDefault();
+    await ensureAudio();
     const t = e.changedTouches[0];
     onStart(t.clientX, t.clientY);
   }, {passive:false});
@@ -523,18 +624,14 @@
   }, {passive:false});
 
   // mouse fallback
-  play.addEventListener("mousedown", (e)=>{
+  play.addEventListener("mousedown", async (e)=>{
     e.preventDefault();
+    await ensureAudio();
     onStart(e.clientX, e.clientY);
   }, {passive:false});
 
-  window.addEventListener("mousemove", (e)=>{
-    onMove(e.clientX, e.clientY);
-  }, {passive:true});
-
-  window.addEventListener("mouseup", ()=>{
-    onEnd();
-  }, {passive:true});
+  window.addEventListener("mousemove", (e)=> onMove(e.clientX, e.clientY), {passive:true});
+  window.addEventListener("mouseup", ()=> onEnd(), {passive:true});
 
   /* ======================
      判定：長い直線OK（線分カバー）
@@ -598,8 +695,13 @@
     setStatus(msg);
   }
 
-  doneBtn.addEventListener("click", ()=>{
-    // 描画中なら確定してから判定（押しっぱなし対策）
+  function celebrate(){
+    spawnConfetti(180);
+    playOk();
+  }
+
+  doneBtn.addEventListener("click", async ()=>{
+    // 描画中なら確定してから判定
     if(drawing) onEnd();
 
     if(strokes.length === 0){
@@ -607,13 +709,16 @@
       return;
     }
 
+    await ensureAudio();
+
     if(isCorrect()){
-      setStatus("せいかい！🎉 つぎの もんだいへ");
+      setStatus("せいかい！🎉");
+      celebrate();
       setTimeout(()=>{
         answer = generateProblem();
         clearAll("つぎの もんだい");
         drawSample();
-      }, 650);
+      }, 850);
     }else{
       setStatus("ちがうよ。もういちど！（線を足してもOK）");
     }
