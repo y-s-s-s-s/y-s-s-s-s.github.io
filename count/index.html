@@ -32,6 +32,32 @@
       overflow:hidden;
     }
 
+    /* =========================
+       ★ 右上「もどる」ボタン（../index.html）
+       ========================= */
+    .backBtn{
+      position:fixed;
+      top:10px;
+      right:10px;
+      z-index:60;
+      text-decoration:none;
+      font-size:13px;
+      font-weight:900;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.25);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.3);
+      user-select:none;
+      touch-action:manipulation;
+    }
+    .backBtn:active{
+      transform: scale(.97);
+      filter: brightness(1.1);
+    }
+
     /* FX canvas */
     #fx{
       position:fixed; inset:0;
@@ -304,6 +330,9 @@
 </head>
 
 <body>
+  <!-- ★ 右上固定：もどる -->
+  <a class="backBtn" href="../index.html" aria-label="トップにもどる">← もどる</a>
+
   <canvas id="fx"></canvas>
 
   <div class="wrap">
@@ -316,37 +345,36 @@
       </div>
     </div>
 
-      <div class="stage" aria-label="数えるもののステージ">
-        <div class="items" id="items" aria-live="polite"></div>
-      </div>
+    <div class="stage" aria-label="数えるもののステージ">
+      <div class="items" id="items" aria-live="polite"></div>
+    </div>
 
-      <div class="answers" id="answers" aria-label="答えのボタン"></div>
+    <div class="answers" id="answers" aria-label="答えのボタン"></div>
 
-      <div class="statusRow">
-        <div class="status" id="status">スタート！</div>
-      </div>
+    <div class="statusRow">
+      <div class="status" id="status">スタート！</div>
+    </div>
 
-      <div class="toolsRow">
-        <button class="miniBtn primary" id="btnNext">つぎへ</button>
-        <button class="miniBtn" id="btnReset">さいしょから</button>
+    <div class="toolsRow">
+      <button class="miniBtn primary" id="btnNext">つぎへ</button>
+      <button class="miniBtn" id="btnReset">さいしょから</button>
 
-        <label class="toggle" title="iPadは最初のタップで音/読み上げが有効になります（仕様）">
-          <input id="soundToggle" type="checkbox" checked>
-          おと ON
-        </label>
+      <label class="toggle" title="iPadは最初のタップで音/読み上げが有効になります（仕様）">
+        <input id="soundToggle" type="checkbox" checked>
+        おと ON
+      </label>
 
-        <label class="toggle" title="正解した時に数字を読み上げます">
-          <input id="speakToggle" type="checkbox" checked>
-          よみあげ ON
-        </label>
+      <label class="toggle" title="正解した時に数字を読み上げます">
+        <input id="speakToggle" type="checkbox" checked>
+        よみあげ ON
+      </label>
 
-        <button class="miniBtn" id="btnTheme">え を いれかえ</button>
-      </div>
+      <button class="miniBtn" id="btnTheme">え を いれかえ</button>
+    </div>
 
-      <div class="footerTip">
-        iPadのコツ：Safari → 共有 →「ホーム画面に追加」でアプリみたいに使えます。<br>
-        ※音/読み上げが出ないときは、サイレント解除＆音量確認をお願いします。
-      </div>
+    <div class="footerTip">
+      iPadのコツ：Safari → 共有 →「ホーム画面に追加」でアプリみたいに使えます。<br>
+      ※音/読み上げが出ないときは、サイレント解除＆音量確認をお願いします。
     </div>
   </div>
 
