@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>てんつなぎ（自動生成・離した瞬間に直線化）</title>
+<title>てんつなぎ（自動生成・直線化・厳密判定）</title>
 
 <style>
   :root{
@@ -13,10 +13,8 @@
     --card:#ffffff;
     --dot:#3e4452;
     --sample:#ff3b3b;
-
     --draw:#00d2ff;                 /* 確定線（濃い水色） */
     --preview:rgba(0,210,255,.35);  /* 描画中プレビュー（薄い水色） */
-
     --accent:#ffd54a;
     --shadow:0 18px 60px rgba(0,0,0,.45);
   }
@@ -35,11 +33,11 @@
     min-height:100svh;
     display:flex;
     justify-content:center;
-    padding:8px; /* ★省スペース（12→8） */
+    padding:8px; /* 省スペース */
     overscroll-behavior:none;
   }
 
-  /* ★花吹雪用Canvas（クリックを邪魔しない） */
+  /* 花吹雪Canvas */
   #fx{
     position:fixed;
     inset:0;
@@ -73,12 +71,10 @@
   }
   .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
 
-  .wrap{
-    width:min(520px, 96vw);
-  }
+  .wrap{ width:min(520px, 96vw); }
 
   h1{
-    margin:4px 0 8px; /* ★省スペース */
+    margin:4px 0 8px;
     font-size:18px;
     font-weight:1000;
     text-align:center;
@@ -88,12 +84,12 @@
   .card{
     background:var(--card);
     border-radius:12px;
-    padding:7px;        /* ★省スペース（10→7） */
-    margin-bottom:8px;  /* ★省スペース（10→8） */
+    padding:7px;
+    margin-bottom:8px;
     box-shadow: var(--shadow);
   }
 
-  canvas{
+  canvas.board{
     display:block;
     width:100%;
     aspect-ratio:1/1;
@@ -107,13 +103,13 @@
     gap:10px;
     justify-content:center;
     flex-wrap:wrap;
-    margin-top:4px; /* ★省スペース */
+    margin-top:4px;
   }
 
   button{
     border:none;
     border-radius:14px;
-    padding:11px 16px; /* ★少しだけ省スペース */
+    padding:11px 16px;
     font-size:16px;
     font-weight:1000;
     cursor:pointer;
@@ -153,11 +149,11 @@
     <h1>てんつなぎ（自動生成）</h1>
 
     <div class="card">
-      <canvas id="sample"></canvas>
+      <canvas class="board" id="sample"></canvas>
     </div>
 
     <div class="card">
-      <canvas id="play"></canvas>
+      <canvas class="board" id="play"></canvas>
     </div>
 
     <div class="row">
@@ -167,7 +163,9 @@
     </div>
 
     <div class="status" id="status">おてほんをみて なぞってね（離すと直線になるよ）</div>
-    <div class="hint">※ 描いている最中は薄い線 / 指を離すと点→点の直線（濃い線）に変わります。</div>
+    <div class="hint">
+      ※ 判定は「画面に表示された直線（濃い線）」から作る単位エッジ（隣の点どうし）が、お手本と完全一致したときだけ正解（余計な線があるとNG）
+    </div>
   </div>
 
 <script>
@@ -183,7 +181,7 @@
   // 点を拾う半径（px）
   const HIT_R = 30;
 
-  // 「開始点/終了点」はこれより近ければ強制スナップ（px）
+  // 開始/終了の強制スナップ（px）
   const FORCE_SNAP_R = 55;
 
   // お手本の長さ（点数）
@@ -193,6 +191,9 @@
   /* ======================
      DOM / Canvas
   ====================== */
+  const fx = document.getElementById("fx");
+  const fxCtx = fx.getContext("2d");
+
   const sample = document.getElementById("sample");
   const play   = document.getElementById("play");
   const sctx = sample.getContext("2d");
@@ -248,8 +249,6 @@
   /* ======================
      花吹雪（Canvas）
   ====================== */
-  const fx = document.getElementById("fx");
-  const fxCtx = fx.getContext("2d");
   const confetti = [];
   function resizeFX(){
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -311,7 +310,7 @@
   }
 
   /* ======================
-     Canvasサイズ確定
+     Canvasサイズ
   ====================== */
   function resizeCanvas(c){
     const r = c.getBoundingClientRect();
@@ -335,7 +334,7 @@
 
   /* ======================
      問題自動生成（自己交差OK）
-     ランダムウォーク（上下左右）
+     ※上下左右ランダムウォーク（本来の単位エッジが必ず水平/垂直）
   ====================== */
   function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
 
@@ -358,7 +357,6 @@
     return out;
   }
 
-  // 3点が同一直線（外積≈0）
   function collinear(a,b,c,eps=1e-12){
     const abx=b.x-a.x, aby=b.y-a.y;
     const bcx=c.x-b.x, bcy=c.y-b.y;
@@ -366,11 +364,10 @@
     return Math.abs(cross) < eps;
   }
 
-  // 中間点を削って長い直線へ
+  // 見た目の直線表示用：同一直線の中間点を削る
   function compressCollinearIds(ids){
     const clean = compressSeq(ids);
     if(clean.length <= 2) return clean;
-
     const out = [clean[0]];
     for(let i=1;i<clean.length-1;i++){
       const a = idToNorm(out[out.length-1]);
@@ -396,13 +393,15 @@
     return out.length >= 2 ? out : generateProblem();
   }
 
-  let answer = generateProblem();
+  let answer = generateProblem();          // 元点列（内部）
+  let answerViewIds = compressCollinearIds(answer); // 表示用（直線化）
 
   /* ======================
-     描画ユーティリティ
+     描画
   ====================== */
   function drawDots(ctx){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--dot").trim() || "#444";
+    const v = getComputedStyle(document.documentElement).getPropertyValue("--dot").trim();
+    ctx.fillStyle = v || "#444";
     for(let i=0;i<GRID;i++){
       for(let j=0;j<GRID;j++){
         const p = dotPos(i,j);
@@ -437,31 +436,28 @@
   function drawSample(){
     sctx.clearRect(0,0,sample.width,sample.height);
     drawDots(sctx);
-    const pts = idsToCanvasPts(answer, sample);
+    const pts = idsToCanvasPts(answerViewIds, sample);
     drawPolyline(sctx, pts, "red", 4);
   }
 
   /* ======================
-     プレイ：複数ストローク
-     - 描画中：フリーハンド（薄い線）
-     - 離した瞬間：点→点の直線（濃い線）に確定
+     プレイ：直線化ストローク
   ====================== */
-  let strokes = []; // { ids:[], pts:[{x,y}...] }
+  let strokes = []; // { idsView:[], ptsView:[{x,y}...], edgeSet:Set<string> }
 
   let drawing = false;
-  let rawPts = [];         // フリーハンド軌跡
-  let currentIds = [];     // move中拾い（最終確定はrawPtsから再抽出）
+  let rawPts = [];
 
   function drawPlay(){
     pctx.clearRect(0,0,play.width,play.height);
     drawDots(pctx);
 
-    // 確定済み（濃い水色）
+    // 確定線（濃い）＝表示用idsView
     for(const st of strokes){
-      drawPolyline(pctx, st.pts, "#00d2ff", 4);
+      drawPolyline(pctx, st.ptsView, "#00d2ff", 4);
     }
 
-    // 描画中プレビュー（薄い水色）
+    // プレビュー（薄い）
     if(drawing && rawPts.length > 1){
       drawPolyline(pctx, rawPts, "rgba(0,210,255,.35)", 4);
     }
@@ -499,21 +495,15 @@
   function extractIdsFromRaw(raw){
     const ids = [];
 
-    // 途中点：近い点を拾う
     for(const p of raw){
       const {id, dist} = nearestDotId(p.x, p.y);
-      if(dist <= HIT_R){
-        pushUnique(ids, id);
-      }
+      if(dist <= HIT_R) pushUnique(ids, id);
     }
 
-    // 開始点/終了点の強制スナップ
+    // 開始/終了は強制スナップ
     if(raw.length){
-      const first = raw[0];
-      const last  = raw[raw.length-1];
-
-      const a = nearestDotId(first.x, first.y);
-      const b = nearestDotId(last.x, last.y);
+      const a = nearestDotId(raw[0].x, raw[0].y);
+      const b = nearestDotId(raw[raw.length-1].x, raw[raw.length-1].y);
 
       if(a.dist <= FORCE_SNAP_R){
         ids.unshift(a.id);
@@ -525,41 +515,77 @@
       }
     }
 
-    return compressCollinearIds(ids);
+    return compressSeq(ids);
+  }
+
+  /* ======================
+     ★厳密判定の中核（見た目と判定を一致）
+     「表示用の点列 idsView」から単位エッジ（隣接点辺）集合を作る
+     - 水平/垂直の長い線は unit edge に分解
+     - 斜めが入ったら null（即NG）
+  ====================== */
+  function edgeKey(a,b){
+    const lo = Math.min(a,b), hi = Math.max(a,b);
+    return lo + "-" + hi;
+  }
+
+  function unitEdgesFromViewIds(idsView){
+    const set = new Set();
+    for(let i=0;i<idsView.length-1;i++){
+      const a = idsView[i], b = idsView[i+1];
+      if(a==null || b==null || a===b) continue;
+
+      const ai = Math.floor(a/GRID), aj = a % GRID;
+      const bi = Math.floor(b/GRID), bj = b % GRID;
+
+      const di = bi - ai;
+      const dj = bj - aj;
+
+      // 斜めはNG（見た目が同じでも厳密判定ではエッジに分解できない）
+      if(di !== 0 && dj !== 0) return null;
+
+      const stepI = di === 0 ? 0 : (di > 0 ? 1 : -1);
+      const stepJ = dj === 0 ? 0 : (dj > 0 ? 1 : -1);
+      const steps = Math.abs(di) + Math.abs(dj);
+
+      let ci = ai, cj = aj;
+      for(let s=0;s<steps;s++){
+        const ni = ci + stepI;
+        const nj = cj + stepJ;
+        const from = ci*GRID + cj;
+        const to   = ni*GRID + nj;
+        set.add(edgeKey(from, to));
+        ci = ni; cj = nj;
+      }
+    }
+    return set;
   }
 
   function finalizeStroke(){
-    const ids = extractIdsFromRaw(rawPts);
-    if(ids.length < 2) return false;
+    const idsUnit = extractIdsFromRaw(rawPts);
+    if(idsUnit.length < 2) return false;
 
-    const pts = idsToCanvasPts(ids, play);
-    strokes.push({ ids, pts });
+    const idsView = compressCollinearIds(idsUnit);
+    if(idsView.length < 2) return false;
+
+    const edgeSet = unitEdgesFromViewIds(idsView);
+    if(edgeSet == null) return false; // 斜めなどが混入
+
+    const ptsView = idsToCanvasPts(idsView, play);
+    strokes.push({ idsView, ptsView, edgeSet });
     return true;
   }
 
   function onStart(clientX, clientY){
     drawing = true;
     rawPts = [];
-    currentIds = [];
-
-    const p = clientToCanvasXY(clientX, clientY);
-    rawPts.push(p);
-
-    const n = nearestDotId(p.x,p.y);
-    if(n.dist <= HIT_R) pushUnique(currentIds, n.id);
-
+    rawPts.push(clientToCanvasXY(clientX, clientY));
     drawPlay();
   }
 
   function onMove(clientX, clientY){
     if(!drawing) return;
-
-    const p = clientToCanvasXY(clientX, clientY);
-    rawPts.push(p);
-
-    const n = nearestDotId(p.x,p.y);
-    if(n.dist <= HIT_R) pushUnique(currentIds, n.id);
-
+    rawPts.push(clientToCanvasXY(clientX, clientY));
     drawPlay();
   }
 
@@ -568,14 +594,11 @@
     drawing = false;
 
     const ok = finalizeStroke();
-
-    // プレビューを消し、確定線のみ表示
     rawPts = [];
-    currentIds = [];
     drawPlay();
 
     if(ok){
-      setStatus("いいね！直線にしたよ。つづけて描いてOK（できた！で判定）");
+      setStatus("直線にしたよ！つづけて描いてOK（できた！で判定）");
     }else{
       setStatus("点の近くをなぞってね（離すと直線になるよ）");
     }
@@ -584,7 +607,7 @@
   /* 入力：Pointer + Touch + Mouse */
   play.addEventListener("pointerdown", async (e)=>{
     e.preventDefault();
-    await ensureAudio(); // ★最初の操作で音が有効になるように
+    await ensureAudio();
     try{ play.setPointerCapture?.(e.pointerId); }catch(_){}
     onStart(e.clientX, e.clientY);
   }, {passive:false});
@@ -604,7 +627,6 @@
     onEnd();
   }, {passive:false});
 
-  // touch fallback
   play.addEventListener("touchstart", async (e)=>{
     e.preventDefault();
     await ensureAudio();
@@ -623,7 +645,6 @@
     onEnd();
   }, {passive:false});
 
-  // mouse fallback
   play.addEventListener("mousedown", async (e)=>{
     e.preventDefault();
     await ensureAudio();
@@ -634,53 +655,31 @@
   window.addEventListener("mouseup", ()=> onEnd(), {passive:true});
 
   /* ======================
-     判定：長い直線OK（線分カバー）
-     ※確定ストローク(strokes[].ids)を使う（見た目と一致）
+     ★厳密判定：単位エッジ集合の完全一致（余計な線があればNG）
+     - お手本：answerViewIds（画面に表示している直線）から edgeSet
+     - プレイヤー：各ストロークの edgeSet を union
+     - Set完全一致で正解
   ====================== */
-  function segments(ids){
-    const segs=[];
-    for(let i=0;i<ids.length-1;i++){
-      const a=ids[i], b=ids[i+1];
-      if(a==null || b==null || a===b) continue;
-      segs.push([a,b]);
+  function unionPlayerEdges(){
+    const all = new Set();
+    for(const st of strokes){
+      for(const k of st.edgeSet) all.add(k);
     }
-    return segs;
+    return all;
   }
 
-  function covers(segA, segB){
-    const p = idToNorm(segA[0]);
-    const q = idToNorm(segA[1]);
-    const r = idToNorm(segB[0]);
-    const s = idToNorm(segB[1]);
-
-    const vx = q.x - p.x, vy = q.y - p.y;
-    const wx = r.x - p.x, wy = r.y - p.y;
-    const cross = vx*wy - vy*wx;
-    if(Math.abs(cross) > 1e-3) return false;
-
-    const dot = (ax,ay,bx,by)=> ax*bx + ay*by;
-    const pq = dot(vx,vy,vx,vy);
-    if(pq < 1e-6) return false;
-
-    const proj = (pt)=> dot(pt.x-p.x, pt.y-p.y, vx, vy);
-    const r1 = proj(r), r2 = proj(s);
-    const minRS = Math.min(r1,r2);
-    const maxRS = Math.max(r1,r2);
-
-    return (minRS <= pq + 1e-6) && (maxRS >= 0 - 1e-6);
+  function setEquals(a, b){
+    if(a.size !== b.size) return false;
+    for(const k of a) if(!b.has(k)) return false;
+    return true;
   }
 
-  function allPlayerSegments(){
-    const out = [];
-    for(const st of strokes) out.push(...segments(st.ids));
-    return out;
-  }
+  function isCorrectStrict(){
+    const ansSet = unitEdgesFromViewIds(answerViewIds);
+    if(ansSet == null) return false; // お手本が斜めになるのは通常ない
 
-  function isCorrect(){
-    const ansSegs = segments(compressCollinearIds(answer));
-    const mySegs  = allPlayerSegments();
-    if(mySegs.length === 0) return false;
-    return ansSegs.every(a => mySegs.some(p => covers(p,a)));
+    const mySet = unionPlayerEdges();
+    return setEquals(ansSet, mySet);
   }
 
   /* ======================
@@ -690,7 +689,6 @@
     strokes = [];
     drawing = false;
     rawPts = [];
-    currentIds = [];
     drawPlay();
     setStatus(msg);
   }
@@ -701,7 +699,6 @@
   }
 
   doneBtn.addEventListener("click", async ()=>{
-    // 描画中なら確定してから判定
     if(drawing) onEnd();
 
     if(strokes.length === 0){
@@ -711,21 +708,23 @@
 
     await ensureAudio();
 
-    if(isCorrect()){
+    if(isCorrectStrict()){
       setStatus("せいかい！🎉");
       celebrate();
       setTimeout(()=>{
         answer = generateProblem();
+        answerViewIds = compressCollinearIds(answer);
         clearAll("つぎの もんだい");
         drawSample();
       }, 850);
     }else{
-      setStatus("ちがうよ。もういちど！（線を足してもOK）");
+      setStatus("ちがうよ。お手本と同じ線だけになるようにしてね（余計な線があるとNG）");
     }
   });
 
   nextBtn.addEventListener("click", ()=>{
     answer = generateProblem();
+    answerViewIds = compressCollinearIds(answer);
     clearAll("つぎの もんだい");
     drawSample();
   });
