@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>シーソーでいちばん重いのは？</title>
+
   <style>
     :root{
       --bg1:#08122c;
@@ -17,6 +18,7 @@
       --accent:#ffd54a;
     }
     *{ box-sizing:border-box; }
+
     body{
       margin:0;
       font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -32,6 +34,32 @@
       justify-content:center;
       padding:12px 0 16px; /* 省スペース */
       overflow:hidden;
+    }
+
+    /* =========================
+       ★ 右上「もどる」ボタン
+       ========================= */
+    .backBtn{
+      position:fixed;
+      top:10px;
+      right:10px;
+      z-index:60;
+      text-decoration:none;
+      font-size:13px;
+      font-weight:900;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.25);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.3);
+      user-select:none;
+      touch-action:manipulation;
+    }
+    .backBtn:active{
+      transform: scale(.97);
+      filter: brightness(1.1);
     }
 
     #fx{
@@ -205,7 +233,7 @@
        ★ choices：スマホでも横一列（省スペース）
        - 折り返し無し
        - 4つを均等幅で表示
-       - 画面が極端に狭い場合は横スクロールで破綻回避
+       - 画面が極端に狭い場合のみ横スクロールで破綻回避
        ============================ */
     .choices{
       display:flex;
@@ -362,43 +390,46 @@
 </head>
 
 <body>
-<canvas id="fx"></canvas>
+  <!-- ★ 右上固定：もどる -->
+  <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
 
-<div class="wrap">
-  <div class="titleRow">
-    <div>
-      <h1>⚖️ シーソーでいちばん重いのは？</h1>
+  <canvas id="fx"></canvas>
+
+  <div class="wrap">
+    <div class="titleRow">
+      <div>
+        <h1>⚖️ シーソーでいちばん重いのは？</h1>
+      </div>
+      <div class="pillRow">
+        <div class="pill">せいかい：<b><span id="score">0</span></b></div>
+        <div class="pill">れんぞく：<b><span id="streak">0</span></b></div>
+      </div>
     </div>
-    <div class="pillRow">
-      <div class="pill">せいかい：<b><span id="score">0</span></b></div>
-      <div class="pill">れんぞく：<b><span id="streak">0</span></b></div>
+
+    <div class="stage">
+      <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較"></div>
+    </div>
+
+    <div class="choices" id="choices" aria-label="答えの選択肢"></div>
+
+    <div class="statusRow">
+      <div class="status" id="status">読み込み中...</div>
+    </div>
+
+    <div class="toolsRow">
+      <button class="miniBtn primary" id="btnNext">つぎの もんだい</button>
+      <button class="miniBtn" id="btnRetry">もういちど</button>
+
+      <label class="toggle" title="iPadは最初のタップで音が有効になります（仕様）">
+        <input id="soundToggle" type="checkbox" checked>
+        おと ON
+      </label>
+    </div>
+
+    <div class="footerTip">
+      画像は <b>../count/assets/items/manifest.json</b> から読み込みます（重複なしで4種類ランダム）。
     </div>
   </div>
-
-  <div class="stage">
-    <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較"></div>
-  </div>
-
-  <div class="choices" id="choices" aria-label="答えの選択肢"></div>
-
-  <div class="statusRow">
-    <div class="status" id="status">読み込み中...</div>
-  </div>
-
-  <div class="toolsRow">
-    <button class="miniBtn primary" id="btnNext">つぎの もんだい</button>
-    <button class="miniBtn" id="btnRetry">もういちど</button>
-
-    <label class="toggle" title="iPadは最初のタップで音が有効になります（仕様）">
-      <input id="soundToggle" type="checkbox" checked>
-      おと ON
-    </label>
-  </div>
-
-  <div class="footerTip">
-    画像は <b>../count/assets/items/manifest.json</b> から読み込みます（重複なしで4種類ランダム）。
-  </div>
-</div>
 
 <script>
 /* ============================
@@ -486,6 +517,7 @@ function playNg(){
 const fx = document.getElementById("fx");
 const cx2 = fx.getContext("2d");
 const particles = [];
+
 function resizeFX(){
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   fx.width = Math.floor(innerWidth * dpr);
@@ -496,6 +528,7 @@ function resizeFX(){
 }
 addEventListener("resize", resizeFX, {passive:true});
 resizeFX();
+
 function rand(a,b){ return a + Math.random()*(b-a); }
 function spawnConfetti(n=120){
   for(let i=0;i<n;i++){
@@ -829,3 +862,4 @@ btnRetry.addEventListener("click", () => {
 </script>
 </body>
 </html>
+``
