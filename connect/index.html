@@ -142,7 +142,9 @@
 </head>
 
 <body>
+  <!-- ✅ 正しい「もどる」ボタン -->
   <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
+
   <canvas id="fx"></canvas>
 
   <div class="wrap">
@@ -184,9 +186,9 @@
   // 開始/終了の強制スナップ（px）
   const FORCE_SNAP_R = 55;
 
-  // お手本の長さ（点数）
-  const MIN_LEN = 9;
-  const MAX_LEN = 16;
+  // ✅ 生成する問題の点の数（ここを変更）
+  const MIN_LEN = 16;
+  const MAX_LEN = 20;
 
   /* ======================
      DOM / Canvas
@@ -334,7 +336,7 @@
 
   /* ======================
      問題自動生成（自己交差OK）
-     ※上下左右ランダムウォーク（本来の単位エッジが必ず水平/垂直）
+     ※上下左右ランダムウォーク
   ====================== */
   function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
 
@@ -364,7 +366,7 @@
     return Math.abs(cross) < eps;
   }
 
-  // 見た目の直線表示用：同一直線の中間点を削る
+  // 表示用：同一直線の中間点を削る
   function compressCollinearIds(ids){
     const clean = compressSeq(ids);
     if(clean.length <= 2) return clean;
@@ -393,8 +395,8 @@
     return out.length >= 2 ? out : generateProblem();
   }
 
-  let answer = generateProblem();          // 元点列（内部）
-  let answerViewIds = compressCollinearIds(answer); // 表示用（直線化）
+  let answer = generateProblem();
+  let answerViewIds = compressCollinearIds(answer);
 
   /* ======================
      描画
@@ -452,12 +454,10 @@
     pctx.clearRect(0,0,play.width,play.height);
     drawDots(pctx);
 
-    // 確定線（濃い）＝表示用idsView
     for(const st of strokes){
       drawPolyline(pctx, st.ptsView, "#00d2ff", 4);
     }
 
-    // プレビュー（薄い）
     if(drawing && rawPts.length > 1){
       drawPolyline(pctx, rawPts, "rgba(0,210,255,.35)", 4);
     }
@@ -491,16 +491,13 @@
     if(arr.length===0 || arr[arr.length-1]!==id) arr.push(id);
   }
 
-  // rawPts全体から点列抽出（取りこぼし対策）
   function extractIdsFromRaw(raw){
     const ids = [];
-
     for(const p of raw){
       const {id, dist} = nearestDotId(p.x, p.y);
       if(dist <= HIT_R) pushUnique(ids, id);
     }
 
-    // 開始/終了は強制スナップ
     if(raw.length){
       const a = nearestDotId(raw[0].x, raw[0].y);
       const b = nearestDotId(raw[raw.length-1].x, raw[raw.length-1].y);
@@ -519,10 +516,8 @@
   }
 
   /* ======================
-     ★厳密判定の中核（見た目と判定を一致）
-     「表示用の点列 idsView」から単位エッジ（隣接点辺）集合を作る
-     - 水平/垂直の長い線は unit edge に分解
-     - 斜めが入ったら null（即NG）
+     厳密判定（見た目と判定一致）
+     「表示用idsView」から単位エッジ集合を作る
   ====================== */
   function edgeKey(a,b){
     const lo = Math.min(a,b), hi = Math.max(a,b);
@@ -541,7 +536,7 @@
       const di = bi - ai;
       const dj = bj - aj;
 
-      // 斜めはNG（見た目が同じでも厳密判定ではエッジに分解できない）
+      // 斜めはNG（このゲームの生成は本来斜めにならない）
       if(di !== 0 && dj !== 0) return null;
 
       const stepI = di === 0 ? 0 : (di > 0 ? 1 : -1);
@@ -569,7 +564,7 @@
     if(idsView.length < 2) return false;
 
     const edgeSet = unitEdgesFromViewIds(idsView);
-    if(edgeSet == null) return false; // 斜めなどが混入
+    if(edgeSet == null) return false;
 
     const ptsView = idsToCanvasPts(idsView, play);
     strokes.push({ idsView, ptsView, edgeSet });
@@ -655,10 +650,7 @@
   window.addEventListener("mouseup", ()=> onEnd(), {passive:true});
 
   /* ======================
-     ★厳密判定：単位エッジ集合の完全一致（余計な線があればNG）
-     - お手本：answerViewIds（画面に表示している直線）から edgeSet
-     - プレイヤー：各ストロークの edgeSet を union
-     - Set完全一致で正解
+     厳密判定：単位エッジ集合の完全一致（余計な線があればNG）
   ====================== */
   function unionPlayerEdges(){
     const all = new Set();
@@ -676,8 +668,7 @@
 
   function isCorrectStrict(){
     const ansSet = unitEdgesFromViewIds(answerViewIds);
-    if(ansSet == null) return false; // お手本が斜めになるのは通常ない
-
+    if(ansSet == null) return false;
     const mySet = unionPlayerEdges();
     return setEquals(ansSet, mySet);
   }
