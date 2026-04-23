@@ -201,17 +201,35 @@
     .tilt-right .platform.left { transform: translateY(-8px); }
     .tilt-right .platform.right{ transform: translateY(8px); }
 
-    /* choices */
+    /* ============================
+       ★ choices：スマホでも横一列（省スペース）
+       - 折り返し無し
+       - 4つを均等幅で表示
+       - 画面が極端に狭い場合は横スクロールで破綻回避
+       ============================ */
     .choices{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
+      display:flex;
+      flex-wrap:nowrap;
+      gap:8px;
       margin-top:10px;
+      align-items:stretch;
+      justify-content:space-between;
+      overflow-x:auto;               /* 保険：超狭幅端末でのみ */
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:2px;            /* スクロールバーが出ても窮屈にならない */
     }
+    .choices::-webkit-scrollbar{ height:6px; }
+    .choices::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.18);
+      border-radius:999px;
+    }
+
     .choiceBtn{
+      flex: 1 1 0;
+      min-width: 68px;              /* 4つ横並びを維持する下限 */
       border:none;
-      border-radius:16px;
-      padding:10px 8px;
+      border-radius:14px;
+      padding:8px 6px;
       cursor:pointer;
       user-select:none;
       touch-action:manipulation;
@@ -222,10 +240,10 @@
       transition: transform .08s ease, filter .08s ease, background .2s ease, border-color .2s ease;
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:6px;
       align-items:center;
       justify-content:center;
-      min-height:92px; /* 省スペース */
+      min-height:80px;              /* 省スペース */
     }
     .choiceBtn:active{ transform: scale(.98); filter: brightness(1.1); }
     .choiceBtn.correct{
@@ -236,8 +254,9 @@
       background: rgba(255,122,122,.16);
       border-color: rgba(255,122,122,.45);
     }
+
     .choiceThumb{
-      width:58px; height:58px;
+      width:52px; height:52px;      /* 省スペース */
       border-radius:14px;
       background: rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.14);
@@ -250,6 +269,19 @@
 
     /* 念のため：名前欄があっても見えない */
     .choiceName{ display:none !important; }
+
+    /* ★さらに小さい画面はもう少し詰める（それでも横一列） */
+    @media (max-width: 430px){
+      .choices{ gap:6px; }
+      .choiceBtn{ min-width: 60px; min-height:72px; padding:7px 5px; border-radius:13px; }
+      .choiceThumb{ width:46px; height:46px; border-radius:13px; }
+    }
+
+    @media (max-width: 360px){
+      .choices{ gap:5px; }
+      .choiceBtn{ min-width: 56px; min-height:68px; padding:6px 4px; }
+      .choiceThumb{ width:42px; height:42px; }
+    }
 
     .statusRow{
       display:flex;
@@ -317,10 +349,6 @@
       color:rgba(255,255,255,.72);
     }
 
-    @media (max-width:720px){
-      .choices{ grid-template-columns: repeat(2, 1fr); }
-      .choiceBtn{ min-height:86px; }
-    }
     @media (max-width:560px){
       h1{ font-size:15px; }
       .footerTip{ display:none; } /* 超小さい画面は非表示 */
@@ -696,8 +724,6 @@ function renderChoices(){
     thumb.className = "choiceThumb";
     thumb.appendChild(createItemNode(item));
     btn.appendChild(thumb);
-
-    // ★A/B/C/D表示は作らない
 
     btn.addEventListener("click", () => choose(item.id, btn));
     choicesEl.appendChild(btn);
