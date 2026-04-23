@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>てんつなぎ</title>
+<title>てんつなぎ（斜め対応・自動生成・直線化・厳密判定）</title>
 
 <style>
   :root{
@@ -18,7 +18,6 @@
     --accent:#ffd54a;
     --shadow:0 14px 44px rgba(0,0,0,.42);
   }
-
   *{ box-sizing:border-box; }
 
   body{
@@ -47,7 +46,7 @@
     z-index:40;
   }
 
-  /* 右上もどる（正しいa） */
+  /* 右上もどる（タグ崩れ防止のため必ず<a>を使う） */
   .backBtn{
     position:fixed;
     top:6px;
@@ -145,13 +144,11 @@
 </head>
 
 <body>
-  <!-- ✅ 正しい「もどる」ボタン -->
   <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
-
   <canvas id="fx"></canvas>
 
   <div class="wrap">
-    <h1>てんつなぎ</h1>
+    <h1>てんつなぎ（斜め対応）</h1>
 
     <div class="card">
       <canvas class="board" id="sample"></canvas>
@@ -168,7 +165,7 @@
     </div>
 
     <div class="status" id="status">おてほんをみて なぞってね（離すと直線になるよ）</div>
-    <div class="hint" id="hint">※ お手本の点の数（折れ点）が 16〜20 になるように自動生成します。余計な線があるとNG。</div>
+    <div class="hint" id="hint">※ お手本の点の数（折れ点）が 16〜20 になるように自動生成。余計な線があるとNG。</div>
   </div>
 
 <script>
@@ -181,9 +178,8 @@
   const GRID = 5;
   const DOT_R = 6;
 
-  // ★点群の外周余白（キャンバス内）を減らす：0.12 → 0.08 などで調整
-  // 小さいほど端に近づく（余白が減る）
-  const GRID_MARGIN = 0.075;   // ★ここが「点の余白」を減らす本体
+  // ★点群の外周余白（キャンバス内）を減らす（小さいほど端に寄る）
+  const GRID_MARGIN = 0.075;  // 例: 0.06 でさらに詰める
 
   // 点を拾う半径（px）
   const HIT_R = 30;
@@ -194,7 +190,7 @@
   // 表示されるお手本（折れ点数）を16〜20に固定
   const MIN_VISIBLE_POINTS = 16;
   const MAX_VISIBLE_POINTS = 20;
-  const GEN_TRIES = 450;
+  const GEN_TRIES = 500;
 
   /* ======================
      DOM / Canvas
@@ -213,8 +209,8 @@
   const nextBtn  = document.getElementById("nextBtn");
   const clearBtn = document.getElementById("clearBtn");
 
-  function setStatus(t){ statusEl.textContent = t; }
-  function setHint(t){ if(hintEl) hintEl.textContent = t; }
+  const setStatus = (t)=> statusEl.textContent = t;
+  const setHint   = (t)=> { if(hintEl) hintEl.textContent = t; };
 
   window.addEventListener("error", (e) => {
     setStatus("エラー: " + (e.message || "unknown"));
@@ -271,7 +267,7 @@
   addEventListener("resize", resizeFX, {passive:true});
   resizeFX();
 
-  function rand(a,b){ return a + Math.random()*(b-a); }
+  const rand = (a,b)=> a + Math.random()*(b-a);
   function spawnConfetti(n=170){
     const cols = ["#ffd54a","#7CFFB2","#5ad8ff","#ff7bd1","#b48cff","#ffffff"];
     for(let i=0;i<n;i++){
@@ -306,9 +302,7 @@
   requestAnimationFrame(fxLoop);
 
   /* ======================
-     座標（点の余白を減らした配置）
-     - 外周余白を GRID_MARGIN にする
-     - 点間隔は (1-2*margin)/(GRID-1) で均等
+     点配置（外周余白を削減）
   ====================== */
   function dotPos(i,j){
     const span = 1 - 2*GRID_MARGIN;
@@ -335,11 +329,14 @@
     c.width = w;
     c.height = w;
   }
+  function drawAll(){
+    drawSample();
+    drawPlay();
+  }
   function resizeAll(){
     resizeCanvas(sample);
     resizeCanvas(play);
-    drawSample();
-    drawPlay();
+    drawAll();
   }
   function bootResize(){
     resizeAll();
@@ -350,14 +347,18 @@
   window.addEventListener("resize", bootResize, {passive:true});
 
   /* ======================
-     問題自動生成（自己交差OK）
+     問題自動生成（自己交差OK・斜めOK）
+     8近傍ランダムウォーク（縦横＋斜め）
   ====================== */
-  function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
+  const randInt = (a,b)=> Math.floor(a + Math.random()*(b-a+1));
 
-  function neighbors(id){
+  function neighbors8(id){
     const {i,j} = idToIJ(id);
     const cand = [];
-    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    const dirs = [
+      [-1,0],[1,0],[0,-1],[0,1],     // 4近傍
+      [-1,-1],[-1,1],[1,-1],[1,1]   // 斜め4近傍
+    ];
     for(const [di,dj] of dirs){
       const ni=i+di, nj=j+dj;
       if(0<=ni && ni<GRID && 0<=nj && nj<GRID) cand.push(ni*GRID+nj);
@@ -380,17 +381,17 @@
     return Math.abs(cross) < eps;
   }
 
-  // 表示用：同一直線の中間点を削る（折れ点だけ残す）
+  // 表示用：同一直線の中間点を削る（水平/垂直/斜めすべて対応）
   function compressCollinearIds(ids){
     const clean = compressSeq(ids);
     if(clean.length <= 2) return clean;
     const out = [clean[0]];
-    for(let i=1;i<clean.length-1;i++){
+    for(let k=1;k<clean.length-1;k++){
       const a = idToNorm(out[out.length-1]);
-      const b = idToNorm(clean[i]);
-      const c = idToNorm(clean[i+1]);
+      const b = idToNorm(clean[k]);
+      const c = idToNorm(clean[k+1]);
       if(collinear(a,b,c)) continue;
-      out.push(clean[i]);
+      out.push(clean[k]);
     }
     out.push(clean[clean.length-1]);
     return out;
@@ -400,7 +401,7 @@
     let cur = randInt(0, GRID*GRID-1);
     const path = [cur];
     for(let k=1;k<rawLen;k++){
-      const ns = neighbors(cur);
+      const ns = neighbors8(cur);
       cur = ns[randInt(0, ns.length-1)];
       path.push(cur);
     }
@@ -409,20 +410,20 @@
 
   function generateProblemWithVisibleCount(){
     for(let t=0;t<GEN_TRIES;t++){
-      const rawLen = randInt(28, 46);
+      const rawLen = randInt(30, 52);  // 斜めも入るので少し長め
       const answer = generateRawWalk(rawLen);
       const view = compressCollinearIds(answer);
       if(view.length >= MIN_VISIBLE_POINTS && view.length <= MAX_VISIBLE_POINTS){
         return { answer, view };
       }
     }
-    const fallbackAnswer = generateRawWalk(40);
+    const fallbackAnswer = generateRawWalk(44);
     return { answer: fallbackAnswer, view: compressCollinearIds(fallbackAnswer) };
   }
 
   let answer, answerViewIds;
   ({ answer, view: answerViewIds } = generateProblemWithVisibleCount());
-  setHint(`※ お手本の点の数（折れ点）：${answerViewIds.length}（目標 16〜20） / 余計な線があるとNG`);
+  setHint(`※ お手本の折れ点：${answerViewIds.length}（目標 16〜20）／斜め対応／余計な線NG`);
 
   /* ======================
      描画
@@ -536,12 +537,16 @@
     return compressSeq(ids);
   }
 
+  /* ======================
+     厳密判定（斜め対応）
+     表示用idsViewから「単位エッジ集合」を作る（縦横＋斜め）
+  ====================== */
   function edgeKey(a,b){
     const lo = Math.min(a,b), hi = Math.max(a,b);
     return lo + "-" + hi;
   }
 
-  // 表示用idsViewから「単位エッジ（隣接点）」に分解
+  // ★斜め対応：di,dj が (0,±k) / (±k,0) / (±k,±k) を許可
   function unitEdgesFromViewIds(idsView){
     const set = new Set();
     for(let i=0;i<idsView.length-1;i++){
@@ -553,11 +558,14 @@
       const di = bi - ai;
       const dj = bj - aj;
 
-      if(di !== 0 && dj !== 0) return null; // 斜めはNG
+      // 許可：水平/垂直/斜め（45度）
+      const isHV = (di === 0 && dj !== 0) || (dj === 0 && di !== 0);
+      const isDiag = (Math.abs(di) === Math.abs(dj) && di !== 0); // 斜め
+      if(!(isHV || isDiag)) return null;
 
       const stepI = di === 0 ? 0 : (di > 0 ? 1 : -1);
       const stepJ = dj === 0 ? 0 : (dj > 0 ? 1 : -1);
-      const steps = Math.abs(di) + Math.abs(dj);
+      const steps = Math.max(Math.abs(di), Math.abs(dj));
 
       let ci = ai, cj = aj;
       for(let s=0;s<steps;s++){
@@ -602,13 +610,16 @@
   function onEnd(){
     if(!drawing) return;
     drawing = false;
+
     const ok = finalizeStroke();
     rawPts = [];
     drawPlay();
+
     setStatus(ok ? "直線にしたよ！つづけて描いてOK（できた！で判定）"
                  : "点の近くをなぞってね（離すと直線になるよ）");
   }
 
+  /* 入力：Pointer + Touch + Mouse */
   play.addEventListener("pointerdown", async (e)=>{
     e.preventDefault();
     await ensureAudio();
@@ -658,6 +669,9 @@
   window.addEventListener("mousemove", (e)=> onMove(e.clientX, e.clientY), {passive:true});
   window.addEventListener("mouseup", ()=> onEnd(), {passive:true});
 
+  /* ======================
+     厳密判定：単位エッジ集合の完全一致（余計な線NG）
+  ====================== */
   function unionPlayerEdges(){
     const all = new Set();
     for(const st of strokes){
@@ -679,6 +693,9 @@
     return setEquals(ansSet, mySet);
   }
 
+  /* ======================
+     ボタン
+  ====================== */
   function clearAll(msg){
     strokes = [];
     drawing = false;
@@ -695,7 +712,7 @@
   doneBtn.addEventListener("click", async ()=>{
     if(drawing) onEnd();
     if(strokes.length === 0){
-      setStatus("まずは なぞってね🙂");
+      setStatus("まずは なぞってね🙂（線を引いてから「できた！」）");
       return;
     }
     await ensureAudio();
@@ -704,7 +721,7 @@
       celebrate();
       setTimeout(()=>{
         ({ answer, view: answerViewIds } = generateProblemWithVisibleCount());
-        setHint(`※ お手本の点の数（折れ点）：${answerViewIds.length}（目標 16〜20） / 余計な線があるとNG`);
+        setHint(`※ お手本の折れ点：${answerViewIds.length}（目標 16〜20）／斜め対応／余計な線NG`);
         clearAll("つぎの もんだい");
         drawSample();
       }, 850);
@@ -715,7 +732,7 @@
 
   nextBtn.addEventListener("click", ()=>{
     ({ answer, view: answerViewIds } = generateProblemWithVisibleCount());
-    setHint(`※ お手本の点の数（折れ点）：${answerViewIds.length}（目標 16〜20） / 余計な線があるとNG`);
+    setHint(`※ お手本の折れ点：${answerViewIds.length}（目標 16〜20）／斜め対応／余計な線NG`);
     clearAll("つぎの もんだい");
     drawSample();
   });
