@@ -46,7 +46,6 @@
       z-index:10;
     }
 
-    /* 上部も少しだけ圧縮 */
     .titleRow{
       display:flex;
       align-items:flex-end;
@@ -59,7 +58,7 @@
       margin:0;
       font-weight:1000;
       letter-spacing:.02em;
-      font-size:16px; /* 小さめ */
+      font-size:16px; /* 少し小さく */
       display:flex;
       align-items:center;
       gap:8px;
@@ -85,16 +84,16 @@
     }
     .pill b{ color:var(--accent); }
 
-    /* ステージ：余白を減らす */
+    /* stage */
     .stage{
       margin-top:8px;
       background:rgba(0,0,0,.20);
       border:1px solid rgba(255,255,255,.14);
       border-radius:16px;
-      padding:10px;
+      padding:10px; /* 省スペース */
     }
 
-    /* ===== シーソー：基本は横3つ ===== */
+    /* ★横3個×縦1行（PC/iPad） */
     .seesawGrid{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
@@ -102,28 +101,21 @@
       align-items:stretch;
     }
 
-    /* ★スマホ：縦積みではなく “横スクロール1行” にして縦を節約 */
+    /* ★スマホは「縦1列」に折り返し（横スクロールはしない） */
     @media (max-width: 860px){
-      .seesawGrid{
-        grid-template-columns: repeat(3, minmax(190px, 1fr));
-        overflow-x:auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom:6px; /* スクロールバー分 */
-        scroll-snap-type: x mandatory;
-      }
-      .seesaw{ scroll-snap-align: start; }
+      .seesawGrid{ grid-template-columns: 1fr; }
     }
 
     .seesaw{
       border-radius:14px;
       background: rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.12);
-      padding:10px 10px 10px;
+      padding:10px;
       position:relative;
       overflow:hidden;
       min-height: 170px; /* 省スペース */
     }
-    /* 「シーソー1/2/3」は削除：要素自体を作らないが、念のため非表示 */
+    /* 念のため */
     .seesawLabel{ display:none !important; }
 
     .rig{
@@ -168,7 +160,7 @@
       transition: transform 260ms ease;
     }
 
-    /* platforms（小さく） */
+    /* platforms */
     .platform{
       position:absolute;
       width:72px;
@@ -209,7 +201,7 @@
     .tilt-right .platform.left { transform: translateY(-8px); }
     .tilt-right .platform.right{ transform: translateY(8px); }
 
-    /* Answer choices：縦を減らす */
+    /* choices */
     .choices{
       display:grid;
       grid-template-columns: repeat(4, 1fr);
@@ -256,7 +248,7 @@
     }
     .choiceThumb img{ width:84%; height:84%; object-fit:contain; }
 
-    /* 「A/B/C/D」の文字を削除：要素は作るが非表示でもOK（ここで確実に消す） */
+    /* 念のため：名前欄があっても見えない */
     .choiceName{ display:none !important; }
 
     .statusRow{
@@ -316,7 +308,6 @@
     }
     .toggle input{ transform:scale(1.15); }
 
-    /* フッターもスマホは非表示（縦節約） */
     .footerTip{
       margin-top:8px;
       font-size:12px;
@@ -325,11 +316,14 @@
       line-height:1.45;
       color:rgba(255,255,255,.72);
     }
-    @media (max-width: 560px){
-      h1{ font-size:15px; }
+
+    @media (max-width:720px){
       .choices{ grid-template-columns: repeat(2, 1fr); }
       .choiceBtn{ min-height:86px; }
-      .footerTip{ display:none; }
+    }
+    @media (max-width:560px){
+      h1{ font-size:15px; }
+      .footerTip{ display:none; } /* 超小さい画面は非表示 */
     }
 
     @media (prefers-reduced-motion: reduce){
@@ -354,7 +348,7 @@
   </div>
 
   <div class="stage">
-    <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較（横3つ）"></div>
+    <div class="seesawGrid" id="seesawGrid" aria-label="シーソー比較"></div>
   </div>
 
   <div class="choices" id="choices" aria-label="答えの選択肢"></div>
@@ -391,7 +385,6 @@ const MANIFEST_URL = IMAGE_DIR + "manifest.json";
 /* ============================
    状態
    ============================ */
-const N = 4;
 let pool = [];
 let currentItems = [];
 let weights = [1,2,3,4];
@@ -564,7 +557,7 @@ function allPermutations(arr){
   backtrack(0);
   return res;
 }
-const perms = allPermutations([0,1,2,3]); // 24
+const perms = allPermutations([0,1,2,3]);
 
 function constraintsFromPairs(pairs, w){
   return pairs.map(({a,b}) => ({
@@ -647,7 +640,7 @@ function createItemNode(item){
 }
 
 /* ============================
-   描画：シーソー3つ（横3）
+   描画：シーソー3つ（ラベルなし）
    ============================ */
 function renderSeesaws(){
   seesawGrid.innerHTML = "";
@@ -657,8 +650,6 @@ function renderSeesaws(){
 
     const box = document.createElement("div");
     box.className = "seesaw " + (c.tilt === "left" ? "tilt-left" : "tilt-right");
-
-    // ★「シーソー1/2/3」ラベルは作らない
 
     const rig = document.createElement("div");
     rig.className = "rig";
@@ -692,21 +683,21 @@ function renderSeesaws(){
 }
 
 /* ============================
-   選択肢（4つ）
+   選択肢（文字なし）
    ============================ */
 function renderChoices(){
   choicesEl.innerHTML = "";
   currentItems.forEach(item => {
     const btn = document.createElement("button");
     btn.className = "choiceBtn";
-    btn.setAttribute("aria-label", `えらぶ`);
+    btn.setAttribute("aria-label", "えらぶ");
 
     const thumb = document.createElement("div");
     thumb.className = "choiceThumb";
     thumb.appendChild(createItemNode(item));
     btn.appendChild(thumb);
 
-    // ★A/B/C/D の文字は表示しない（.choiceName自体を作らない）
+    // ★A/B/C/D表示は作らない
 
     btn.addEventListener("click", () => choose(item.id, btn));
     choicesEl.appendChild(btn);
@@ -727,7 +718,7 @@ function buildItemsFromFiles(files){
     id: i,
     img: IMAGE_DIR + file,
     fallback: fallbacks[i],
-    alt: "" // ラベルなし
+    alt: ""
   }));
 }
 
