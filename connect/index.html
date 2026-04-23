@@ -1,8 +1,9 @@
-<!doctype html><!doctype="ja">
+<!doctype html>
+<html lang="ja">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>てんつなぎ（自動生成・直線化・厳密判定）</title>
+<title>てんつなぎ</title>
 
 <style>
   :root{
@@ -15,9 +16,11 @@
     --draw:#00d2ff;                 /* 確定線（濃い水色） */
     --preview:rgba(0,210,255,.35);  /* 描画中プレビュー（薄い水色） */
     --accent:#ffd54a;
-    --shadow:0 18px 60px rgba(0,0,0,.45);
+    --shadow:0 14px 44px rgba(0,0,0,.42);
   }
+
   *{ box-sizing:border-box; }
+
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -30,7 +33,7 @@
     min-height:100svh;
     display:flex;
     justify-content:center;
-    padding:8px; /* 省スペース */
+    padding:4px; /* コンパクト */
     overscroll-behavior:none;
   }
 
@@ -44,22 +47,22 @@
     z-index:40;
   }
 
-  /* 右上もどる（正しいa要素） */
+  /* 右上もどる（正しいa） */
   .backBtn{
     position:fixed;
-    top:8px;
-    right:8px;
+    top:6px;
+    right:6px;
     z-index:999;
     text-decoration:none;
-    font-size:13px;
+    font-size:12px;
     font-weight:900;
-    padding:8px 12px;
+    padding:7px 10px;
     border-radius:999px;
     background:rgba(255,255,255,.14);
     color:#fff;
     border:1px solid rgba(255,255,255,.25);
     backdrop-filter: blur(6px);
-    box-shadow: 0 10px 26px rgba(0,0,0,.3);
+    box-shadow: 0 10px 22px rgba(0,0,0,.30);
     user-select:none;
     touch-action:manipulation;
     display:inline-flex;
@@ -69,20 +72,23 @@
   .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
 
   .wrap{ width:min(520px, 96vw); }
+
   h1{
-    margin:4px 0 8px;
-    font-size:18px;
+    margin:2px 0 6px;
+    font-size:17px;
     font-weight:1000;
     text-align:center;
     letter-spacing:.02em;
   }
+
   .card{
     background:var(--card);
     border-radius:12px;
-    padding:7px;
-    margin-bottom:8px;
+    padding:4px;        /* 白余白を削減 */
+    margin-bottom:6px;  /* 間隔を削減 */
     box-shadow: var(--shadow);
   }
+
   canvas.board{
     display:block;
     width:100%;
@@ -91,18 +97,20 @@
     user-select:none;
     -webkit-user-select:none;
   }
+
   .row{
     display:flex;
-    gap:10px;
+    gap:8px;
     justify-content:center;
     flex-wrap:wrap;
-    margin-top:4px;
+    margin-top:2px;
   }
+
   button{
     border:none;
     border-radius:14px;
-    padding:11px 16px;
-    font-size:16px;
+    padding:10px 14px;
+    font-size:15px;
     font-weight:1000;
     cursor:pointer;
     user-select:none;
@@ -112,33 +120,38 @@
   .sub{ background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.22); }
 
   .status{
-    margin-top:8px;
-    text-align:center;
-    font-weight:1000;
-    min-height:1.6em;
-  }
-  .hint{
     margin-top:6px;
     text-align:center;
-    font-size:12px;
+    font-weight:1000;
+    min-height:1.4em;
+    font-size:14px;
+  }
+  .hint{
+    margin-top:4px;
+    text-align:center;
+    font-size:11px;
     opacity:.86;
-    line-height:1.4;
+    line-height:1.35;
   }
 
-  @media (max-width:420px){
-    body{ padding:6px; }
-    .card{ padding:6px; margin-bottom:7px; }
-    button{ padding:10px 14px; }
+  @media (max-width:380px){
+    body{ padding:3px; }
+    .card{ padding:3px; margin-bottom:5px; }
+    h1{ font-size:16px; margin:2px 0 5px; }
+    .hint{ display:none; }
+    button{ padding:9px 12px; font-size:14px; }
   }
 </style>
 </head>
 
 <body>
-  <a class="backBtn" href="../index.html">← もどる</a>
+  <!-- ✅ 正しい「もどる」ボタン -->
+  <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
+
   <canvas id="fx"></canvas>
 
   <div class="wrap">
-    <h1>てんつなぎ（自動生成）</h1>
+    <h1>てんつなぎ</h1>
 
     <div class="card">
       <canvas class="board" id="sample"></canvas>
@@ -155,9 +168,7 @@
     </div>
 
     <div class="status" id="status">おてほんをみて なぞってね（離すと直線になるよ）</div>
-    <div class="hint" id="hint">
-      ※ お手本の点の数（折れ点）が 16〜20 になるように自動生成します。余計な線があるとNG。
-    </div>
+    <div class="hint" id="hint">※ お手本の点の数（折れ点）が 16〜20 になるように自動生成します。余計な線があるとNG。</div>
   </div>
 
 <script>
@@ -170,18 +181,20 @@
   const GRID = 5;
   const DOT_R = 6;
 
+  // ★点群の外周余白（キャンバス内）を減らす：0.12 → 0.08 などで調整
+  // 小さいほど端に近づく（余白が減る）
+  const GRID_MARGIN = 0.075;   // ★ここが「点の余白」を減らす本体
+
   // 点を拾う半径（px）
   const HIT_R = 30;
 
   // 開始/終了の強制スナップ（px）
   const FORCE_SNAP_R = 55;
 
-  // ✅「表示されるお手本（折れ点）」の点数を 16〜20 に固定
+  // 表示されるお手本（折れ点数）を16〜20に固定
   const MIN_VISIBLE_POINTS = 16;
   const MAX_VISIBLE_POINTS = 20;
-
-  // 生成の試行回数（安全のため）
-  const GEN_TRIES = 400;
+  const GEN_TRIES = 450;
 
   /* ======================
      DOM / Canvas
@@ -201,7 +214,7 @@
   const clearBtn = document.getElementById("clearBtn");
 
   function setStatus(t){ statusEl.textContent = t; }
-  function setHint(t){ hintEl.textContent = t; }
+  function setHint(t){ if(hintEl) hintEl.textContent = t; }
 
   window.addEventListener("error", (e) => {
     setStatus("エラー: " + (e.message || "unknown"));
@@ -293,10 +306,17 @@
   requestAnimationFrame(fxLoop);
 
   /* ======================
-     座標（正規化）
+     座標（点の余白を減らした配置）
+     - 外周余白を GRID_MARGIN にする
+     - 点間隔は (1-2*margin)/(GRID-1) で均等
   ====================== */
   function dotPos(i,j){
-    return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
+    const span = 1 - 2*GRID_MARGIN;
+    const step = span / (GRID - 1);
+    return {
+      x: GRID_MARGIN + j * step,
+      y: GRID_MARGIN + i * step
+    };
   }
   function idToIJ(id){
     return { i: Math.floor(id/GRID), j: id % GRID };
@@ -331,7 +351,6 @@
 
   /* ======================
      問題自動生成（自己交差OK）
-     ※上下左右ランダムウォーク
   ====================== */
   function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
 
@@ -377,7 +396,6 @@
     return out;
   }
 
-  // まず長めの元点列を作る（最終的に折れ点が16～20になるまで調整するため）
   function generateRawWalk(rawLen){
     let cur = randInt(0, GRID*GRID-1);
     const path = [cur];
@@ -389,20 +407,15 @@
     return compressSeq(path);
   }
 
-  // ✅表示点数（answerViewIds.length）が必ず16〜20になるまで生成し直す
   function generateProblemWithVisibleCount(){
     for(let t=0;t<GEN_TRIES;t++){
-      // 折れ点が減ることを見越して、元はやや長めに作る
       const rawLen = randInt(28, 46);
       const answer = generateRawWalk(rawLen);
       const view = compressCollinearIds(answer);
-
       if(view.length >= MIN_VISIBLE_POINTS && view.length <= MAX_VISIBLE_POINTS){
         return { answer, view };
       }
     }
-    // 万一見つからない場合は、最後に条件を満たすまで無限ループしないようフォールバック
-    // （この条件だと通常ここに来ません）
     const fallbackAnswer = generateRawWalk(40);
     return { answer: fallbackAnswer, view: compressCollinearIds(fallbackAnswer) };
   }
@@ -459,7 +472,6 @@
      プレイ：直線化ストローク
   ====================== */
   let strokes = []; // { idsView:[], ptsView:[{x,y}...], edgeSet:Set<string> }
-
   let drawing = false;
   let rawPts = [];
 
@@ -470,7 +482,6 @@
     for(const st of strokes){
       drawPolyline(pctx, st.ptsView, "#00d2ff", 4);
     }
-
     if(drawing && rawPts.length > 1){
       drawPolyline(pctx, rawPts, "rgba(0,210,255,.35)", 4);
     }
@@ -510,11 +521,9 @@
       const {id, dist} = nearestDotId(p.x, p.y);
       if(dist <= HIT_R) pushUnique(ids, id);
     }
-
     if(raw.length){
       const a = nearestDotId(raw[0].x, raw[0].y);
       const b = nearestDotId(raw[raw.length-1].x, raw[raw.length-1].y);
-
       if(a.dist <= FORCE_SNAP_R){
         ids.unshift(a.id);
         while(ids.length>=2 && ids[0]===ids[1]) ids.shift();
@@ -524,19 +533,15 @@
         while(ids.length>=2 && ids[ids.length-1]===ids[ids.length-2]) ids.pop();
       }
     }
-
     return compressSeq(ids);
   }
 
-  /* ======================
-     厳密判定（見た目と判定一致）
-     「表示用idsView」→単位エッジ集合（隣接点辺）に分解して比較
-  ====================== */
   function edgeKey(a,b){
     const lo = Math.min(a,b), hi = Math.max(a,b);
     return lo + "-" + hi;
   }
 
+  // 表示用idsViewから「単位エッジ（隣接点）」に分解
   function unitEdgesFromViewIds(idsView){
     const set = new Set();
     for(let i=0;i<idsView.length-1;i++){
@@ -545,7 +550,6 @@
 
       const ai = Math.floor(a/GRID), aj = a % GRID;
       const bi = Math.floor(b/GRID), bj = b % GRID;
-
       const di = bi - ai;
       const dj = bj - aj;
 
@@ -585,8 +589,7 @@
 
   function onStart(clientX, clientY){
     drawing = true;
-    rawPts = [];
-    rawPts.push(clientToCanvasXY(clientX, clientY));
+    rawPts = [clientToCanvasXY(clientX, clientY)];
     drawPlay();
   }
 
@@ -599,19 +602,13 @@
   function onEnd(){
     if(!drawing) return;
     drawing = false;
-
     const ok = finalizeStroke();
     rawPts = [];
     drawPlay();
-
-    if(ok){
-      setStatus("直線にしたよ！つづけて描いてOK（できた！で判定）");
-    }else{
-      setStatus("点の近くをなぞってね（離すと直線になるよ）");
-    }
+    setStatus(ok ? "直線にしたよ！つづけて描いてOK（できた！で判定）"
+                 : "点の近くをなぞってね（離すと直線になるよ）");
   }
 
-  /* 入力：Pointer + Touch + Mouse */
   play.addEventListener("pointerdown", async (e)=>{
     e.preventDefault();
     await ensureAudio();
@@ -697,14 +694,11 @@
 
   doneBtn.addEventListener("click", async ()=>{
     if(drawing) onEnd();
-
     if(strokes.length === 0){
-      setStatus("まずは なぞってね🙂（線を引いてから「できた！」）");
+      setStatus("まずは なぞってね🙂");
       return;
     }
-
     await ensureAudio();
-
     if(isCorrectStrict()){
       setStatus("せいかい！🎉");
       celebrate();
