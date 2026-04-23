@@ -1,313 +1,546 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>てんつなぎ（自動生成）</title>
 
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
-  background:#0b1538;
-  color:#fff;
-  display:flex;
-  justify-content:center;
-}
-.wrap{
-  width:min(520px,96vw);
-  padding:12px;
-}
-h1{
-  font-size:18px;
-  font-weight:1000;
-  text-align:center;
-  margin:6px 0 10px;
-}
-.card{
-  background:#fff;
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:10px;
-}
-canvas{
-  display:block;
-  width:100%;
-  aspect-ratio:1/1;
-  touch-action:none;
-}
-.row{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-}
-button{
-  border:none;
-  border-radius:14px;
-  padding:12px 16px;
-  font-size:16px;
-  font-weight:1000;
-}
-.primary{ background:#ffd54a; color:#221400; }
-.sub{ background:rgba(255,255,255,.15); color:#fff; }
+  :root{
+    --bg1:#0b1538;
+    --bg2:#0b2a3a;
+    --text:#f2f5ff;
+    --card:#ffffff;
+    --dot:#3e4452;
+    --sample:#ff3b3b;
+    --draw:#00d2ff;
+    --accent:#ffd54a;
+    --shadow:0 18px 60px rgba(0,0,0,.45);
+  }
 
-.status{
-  text-align:center;
-  font-weight:1000;
-  margin-top:8px;
-}
+  *{ box-sizing:border-box; }
 
-/* 右上 もどる */
-.backBtn{
-  position:fixed;
-  top:10px;
-  right:10px;
-  z-index:50;
-  text-decoration:none;
-  padding:8px 12px;
-  font-size:13px;
-  font-weight:900;
-  border-radius:999px;
-  background:rgba(255,255,255,.14);
-  color:#fff;
-  border:1px solid rgba(255,255,255,.25);
-}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1000px 700px at 15% 10%, #253d85, var(--bg1)),
+      radial-gradient(900px 650px at 85% 20%, #3c1d7a, transparent 60%),
+      radial-gradient(900px 650px at 50% 120%, #145a5e, transparent 55%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    min-height:100svh;
+    display:flex;
+    justify-content:center;
+    padding:12px;
+    overscroll-behavior:none;
+  }
+
+  /* 右上もどる（※画面を覆わないように最小サイズ＆fixed） */
+  .backBtn{
+    position:fixed;
+    top:10px;
+    right:10px;
+    z-index:999;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:900;
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(255,255,255,.14);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.25);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 26px rgba(0,0,0,.3);
+    user-select:none;
+    touch-action:manipulation;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
+
+  .wrap{
+    width:min(520px, 96vw);
+  }
+
+  h1{
+    margin:6px 0 10px;
+    font-size:18px;
+    font-weight:1000;
+    text-align:center;
+    letter-spacing:.02em;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:12px;
+    padding:10px;
+    margin-bottom:10px;
+    box-shadow: var(--shadow);
+  }
+
+  canvas{
+    display:block;
+    width:100%;
+    aspect-ratio:1/1;
+    touch-action:none;           /* ←これがないとスクロールに奪われる事がある */
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-top:6px;
+  }
+
+  button{
+    border:none;
+    border-radius:14px;
+    padding:12px 16px;
+    font-size:16px;
+    font-weight:1000;
+    cursor:pointer;
+    user-select:none;
+    touch-action:manipulation;
+  }
+  .primary{ background:var(--accent); color:#221400; }
+  .sub{ background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.22); }
+
+  .status{
+    margin-top:10px;
+    text-align:center;
+    font-weight:1000;
+    min-height:1.6em;
+  }
+  .debug{
+    margin-top:6px;
+    text-align:center;
+    font-size:12px;
+    opacity:.85;
+    word-break:break-all;
+  }
 </style>
 </head>
 
 <body>
-<a class="backBtn" href="../index.html">← もどる</a>
+  <a class="backBtn" href="../index.html" aria-label="もどる">← もどる</a>
 
-<div class="wrap">
-  <h1>てんつなぎ</h1>
+  <div class="wrap">
+    <h1>てんつなぎ（自動生成）</h1>
 
-  <div class="card">
-    <canvas id="sample"></canvas>
+    <div class="card">
+      <canvas id="sample"></canvas>
+    </div>
+
+    <div class="card">
+      <canvas id="play"></canvas>
+    </div>
+
+    <div class="row">
+      <button class="primary" id="doneBtn">できた！</button>
+      <button class="sub" id="nextBtn">つぎ</button>
+      <button class="sub" id="clearBtn">けす</button>
+    </div>
+
+    <div class="status" id="status">おてほんをみて なぞってね</div>
+    <div class="debug" id="debug">debug: 起動中…</div>
   </div>
-
-  <div class="card">
-    <canvas id="play"></canvas>
-  </div>
-
-  <div class="row">
-    <button class="primary" id="doneBtn">できた！</button>
-    <button class="sub" id="nextBtn">つぎ</button>
-    <button class="sub" id="clearBtn">けす</button>
-  </div>
-
-  <div class="status" id="status">おてほんをみて なぞってね</div>
-</div>
 
 <script>
-/* ======================
-   設定
-====================== */
-const GRID = 5;
-const DOT_R = 6;
-const HIT_R = 22;
+(() => {
+  "use strict";
 
-/* ======================
-   ユーティリティ
-====================== */
-function rand(a,b){ return a+Math.random()*(b-a); }
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
-  return a;
-}
-function dotPos(i,j){
-  return {x:(j+1)/(GRID+1), y:(i+1)/(GRID+1)};
-}
-function idToXY(id){
-  const i=Math.floor(id/GRID);
-  const j=id%GRID;
-  return dotPos(i,j);
-}
+  /* ======================
+     設定
+  ====================== */
+  const GRID = 5;          // 5x5
+  const DOT_R = 6;
+  const HIT_R = 24;        // 点を拾う半径(px)
+  const MIN_LEN = 9;       // 問題の点数
+  const MAX_LEN = 15;
 
-/* ======================
-   問題自動生成
-====================== */
-function generateProblem(){
-  const all=[...Array(GRID*GRID).keys()];
-  shuffle(all);
-  const len=Math.floor(rand(8,14));
-  return all.slice(0,len);
-}
-let answer = generateProblem();
+  /* ======================
+     DOM / Canvas
+  ====================== */
+  const sample = document.getElementById("sample");
+  const play   = document.getElementById("play");
+  const sctx = sample.getContext("2d");
+  const pctx = play.getContext("2d");
+  const statusEl = document.getElementById("status");
+  const debugEl  = document.getElementById("debug");
+  const doneBtn  = document.getElementById("doneBtn");
+  const nextBtn  = document.getElementById("nextBtn");
+  const clearBtn = document.getElementById("clearBtn");
 
-/* ======================
-   Canvas
-====================== */
-const sample=document.getElementById("sample");
-const play=document.getElementById("play");
-const sctx=sample.getContext("2d");
-const pctx=play.getContext("2d");
-const statusEl=document.getElementById("status");
+  function setStatus(t){ statusEl.textContent = t; }
+  function setDebug(t){ debugEl.textContent = t; }
 
-function resize(c){
-  const w=c.getBoundingClientRect().width;
-  c.width=w;
-  c.height=w;
-}
-function resizeAll(){
-  resize(sample); resize(play);
-  drawSample(); drawPlay();
-}
-window.addEventListener("resize",resizeAll);
-resizeAll();
+  // JS稼働確認
+  setDebug("debug: JS OK / " + navigator.userAgent);
 
-/* ======================
-   描画
-====================== */
-function drawDots(ctx){
-  ctx.fillStyle="#444";
-  for(let i=0;i<GRID;i++){
-    for(let j=0;j<GRID;j++){
-      const p=dotPos(i,j);
-      ctx.beginPath();
-      ctx.arc(p.x*ctx.canvas.width,p.y*ctx.canvas.height,DOT_R,0,Math.PI*2);
-      ctx.fill();
-    }
-  }
-}
-
-function drawSample(){
-  sctx.clearRect(0,0,sample.width,sample.height);
-  drawDots(sctx);
-  sctx.strokeStyle="red";
-  sctx.lineWidth=4;
-  sctx.beginPath();
-  answer.forEach((id,k)=>{
-    const p=idToXY(id);
-    const x=p.x*sample.width;
-    const y=p.y*sample.height;
-    if(k===0) sctx.moveTo(x,y);
-    else sctx.lineTo(x,y);
+  // エラーを画面に出す（コンソール無しでも気づける）
+  window.addEventListener("error", (e) => {
+    setStatus("エラー: " + (e.message || "unknown"));
+    setDebug("debug: " + (e.filename || "") + ":" + (e.lineno || ""));
   });
-  sctx.stroke();
-}
 
-/* ======================
-   プレイ
-====================== */
-let drawPts=[];
-let hitIds=[];
-let drawing=false;
-
-function drawPlay(){
-  pctx.clearRect(0,0,play.width,play.height);
-  drawDots(pctx);
-  if(drawPts.length>1){
-    pctx.strokeStyle="#00d2ff";
-    pctx.lineWidth=4;
-    pctx.beginPath();
-    drawPts.forEach((p,i)=>{
-      if(i===0) pctx.moveTo(p.x,p.y);
-      else pctx.lineTo(p.x,p.y);
-    });
-    pctx.stroke();
+  /* ======================
+     座標系
+  ====================== */
+  function dotPos(i,j){
+    return { x:(j+1)/(GRID+1), y:(i+1)/(GRID+1) };
   }
-}
+  function idToIJ(id){
+    return { i: Math.floor(id/GRID), j: id % GRID };
+  }
+  function idToNorm(id){
+    const {i,j} = idToIJ(id);
+    return dotPos(i,j);
+  }
 
-function hitTest(x,y){
-  let best=null,dist=1e9;
-  for(let i=0;i<GRID;i++){
-    for(let j=0;j<GRID;j++){
-      const id=i*GRID+j;
-      const p=dotPos(i,j);
-      const px=p.x*play.width;
-      const py=p.y*play.height;
-      const d=Math.hypot(x-px,y-py);
-      if(d<HIT_R && d<dist){dist=d;best=id;}
+  function resizeCanvas(c){
+    const r = c.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(r.width));
+    c.width  = w;
+    c.height = w;
+  }
+  function resizeAll(){
+    resizeCanvas(sample);
+    resizeCanvas(play);
+    drawSample();
+    drawPlay();
+  }
+
+  // 初期描画はDOM反映の後にもう一度やる（幅0対策）
+  function bootResize(){
+    resizeAll();
+    requestAnimationFrame(resizeAll);
+    setTimeout(resizeAll, 60);
+    setTimeout(resizeAll, 220);
+  }
+  window.addEventListener("resize", bootResize, {passive:true});
+
+  /* ======================
+     問題自動生成（自己交差OK）
+     - ランダムウォークでそれっぽい線になる
+  ====================== */
+  function randInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
+
+  function neighbors(id){
+    const {i,j} = idToIJ(id);
+    const cand = [];
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for(const [di,dj] of dirs){
+      const ni=i+di, nj=j+dj;
+      if(0<=ni && ni<GRID && 0<=nj && nj<GRID){
+        cand.push(ni*GRID+nj);
+      }
+    }
+    return cand;
+  }
+
+  function generateProblem(){
+    const len = randInt(MIN_LEN, MAX_LEN);
+    const start = randInt(0, GRID*GRID-1);
+    const path = [start];
+    let cur = start;
+
+    for(let k=1;k<len;k++){
+      const ns = neighbors(cur);
+      // 戻りを避けたいときはここでフィルタできるが、自己交差OKなのでそのまま
+      cur = ns[randInt(0, ns.length-1)];
+      path.push(cur);
+    }
+
+    // 連続重複だけ除去（同じ点に居続けるのを防ぐ）
+    const out = [];
+    for(const v of path){
+      if(out.length===0 || out[out.length-1]!==v) out.push(v);
+    }
+    return out.length >= 2 ? out : generateProblem();
+  }
+
+  let answer = generateProblem();
+
+  /* ======================
+     描画
+  ====================== */
+  function drawDots(ctx){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--dot") || "#444";
+    for(let i=0;i<GRID;i++){
+      for(let j=0;j<GRID;j++){
+        const p = dotPos(i,j);
+        const x = p.x * ctx.canvas.width;
+        const y = p.y * ctx.canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, DOT_R, 0, Math.PI*2);
+        ctx.fill();
+      }
     }
   }
-  return best;
-}
 
-function getXY(e){
-  const r=play.getBoundingClientRect();
-  return {x:e.clientX-r.left,y:e.clientY-r.top};
-}
-
-play.addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  drawing=true;
-  drawPts=[]; hitIds=[];
-  const p=getXY(e);
-  drawPts.push(p);
-  const id=hitTest(p.x,p.y);
-  if(id!=null) hitIds.push(id);
-  drawPlay();
-});
-play.addEventListener("pointermove",e=>{
-  if(!drawing) return;
-  const p=getXY(e);
-  drawPts.push(p);
-  const id=hitTest(p.x,p.y);
-  if(id!=null && hitIds[hitIds.length-1]!==id) hitIds.push(id);
-  drawPlay();
-});
-window.addEventListener("pointerup",()=>drawing=false);
-
-/* ======================
-   判定（長い直線OK）
-====================== */
-function compress(ids){
-  const o=[];
-  ids.forEach(v=>{ if(o[o.length-1]!==v) o.push(v); });
-  return o;
-}
-function segments(ids){
-  const s=[];
-  for(let i=0;i<ids.length-1;i++){
-    if(ids[i]!==ids[i+1]) s.push([ids[i],ids[i+1]]);
+  function drawPolyline(ctx, pts, color, width){
+    if(pts.length < 2) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap  = "round";
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<pts.length;i++){
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
   }
-  return s;
-}
-function covers(a,b){
-  const p=idToXY(a[0]), q=idToXY(a[1]);
-  const r=idToXY(b[0]), s=idToXY(b[1]);
-  const vx=q.x-p.x, vy=q.y-p.y;
-  const wx=r.x-p.x, wy=r.y-p.y;
-  if(Math.abs(vx*wy-vy*wx)>1e-3) return false;
-  const dot=(ax,ay,bx,by)=>ax*bx+ay*by;
-  const pq=dot(vx,vy,vx,vy);
-  const proj=v=>dot(v.x-p.x,v.y-p.y,vx,vy);
-  return Math.min(proj(r),proj(s))<=pq && Math.max(proj(r),proj(s))>=0;
-}
-function isCorrect(){
-  const aSeg=segments(compress(answer));
-  const pSeg=segments(compress(hitIds));
-  return aSeg.every(a=>pSeg.some(p=>covers(p,a)));
-}
 
-/* ======================
-   操作
-====================== */
-doneBtn.onclick=()=>{
-  if(isCorrect()){
-    statusEl.textContent="せいかい！🎉";
-  }else{
-    statusEl.textContent="ちがうよ。もういちど！";
+  function drawSample(){
+    sctx.clearRect(0,0,sample.width,sample.height);
+    drawDots(sctx);
+    const pts = answer.map(id => {
+      const p = idToNorm(id);
+      return { x:p.x*sample.width, y:p.y*sample.height };
+    });
+    drawPolyline(sctx, pts, getComputedStyle(document.documentElement).getPropertyValue("--sample") || "red", 4);
   }
-};
-nextBtn.onclick=()=>{
-  answer=generateProblem();
-  drawPts=[]; hitIds=[];
-  drawSample(); drawPlay();
-  statusEl.textContent="つぎの もんだい";
-};
-clearBtn.onclick=()=>{
-  drawPts=[]; hitIds=[];
-  drawPlay();
-  statusEl.textContent="やりなおし";
-};
 
-drawSample();
-drawPlay();
+  /* ======================
+     プレイ：描画用（軌跡）と判定用（点列）を分離
+  ====================== */
+  let drawPts = [];     // どこでも描く（必ず線が出る）
+  let hitIds  = [];     // 点を拾ったID列（判定用）
+  let drawing = false;
+  let events = 0;
+
+  function drawPlay(){
+    pctx.clearRect(0,0,play.width,play.height);
+    drawDots(pctx);
+
+    // 軌跡（必ず描ける）
+    drawPolyline(pctx, drawPts, getComputedStyle(document.documentElement).getPropertyValue("--draw") || "#00d2ff", 4);
+  }
+
+  function clientToCanvasXY(clientX, clientY){
+    const r = play.getBoundingClientRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+
+  function hitTest(x,y){
+    let best=null, bestD=1e9;
+    for(let i=0;i<GRID;i++){
+      for(let j=0;j<GRID;j++){
+        const id = i*GRID + j;
+        const p = dotPos(i,j);
+        const px = p.x * play.width;
+        const py = p.y * play.height;
+        const d = Math.hypot(x-px, y-py);
+        if(d < HIT_R && d < bestD){
+          bestD = d;
+          best = id;
+        }
+      }
+    }
+    return best;
+  }
+
+  function pushHit(id){
+    if(id==null) return;
+    if(hitIds.length===0 || hitIds[hitIds.length-1]!==id) hitIds.push(id);
+  }
+
+  function onStart(clientX, clientY, src){
+    drawing = true;
+    drawPts = [];
+    hitIds  = [];
+
+    const p = clientToCanvasXY(clientX, clientY);
+    drawPts.push(p);
+    pushHit(hitTest(p.x, p.y));
+
+    events++;
+    setStatus("なぞってるよ…（できた！で判定）");
+    setDebug(`debug: ${src} start / events=${events} / hits=${hitIds.length}`);
+    drawPlay();
+  }
+
+  function onMove(clientX, clientY, src){
+    if(!drawing) return;
+    const p = clientToCanvasXY(clientX, clientY);
+    drawPts.push(p);
+    pushHit(hitTest(p.x, p.y));
+
+    events++;
+    setDebug(`debug: ${src} move / events=${events} / hits=${hitIds.length}`);
+    drawPlay();
+  }
+
+  function onEnd(src){
+    if(!drawing) return;
+    drawing = false;
+    events++;
+    setDebug(`debug: ${src} end / events=${events} / hits=${hitIds.length}`);
+  }
+
+  /* ★Pointer / Touch / Mouse 全対応（passive:falseで確実に止める） */
+  play.addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    try{ play.setPointerCapture?.(e.pointerId); }catch(_){}
+    onStart(e.clientX, e.clientY, "pointer");
+  }, {passive:false});
+
+  play.addEventListener("pointermove", (e)=>{
+    e.preventDefault();
+    onMove(e.clientX, e.clientY, "pointer");
+  }, {passive:false});
+
+  play.addEventListener("pointerup", (e)=>{
+    e.preventDefault();
+    onEnd("pointer");
+  }, {passive:false});
+
+  play.addEventListener("pointercancel", (e)=>{
+    e.preventDefault();
+    onEnd("pointercancel");
+  }, {passive:false});
+
+  // mouse fallback
+  play.addEventListener("mousedown", (e)=>{
+    e.preventDefault();
+    onStart(e.clientX, e.clientY, "mouse");
+  }, {passive:false});
+
+  window.addEventListener("mousemove", (e)=>{
+    onMove(e.clientX, e.clientY, "mouse");
+  }, {passive:true});
+
+  window.addEventListener("mouseup", ()=>{
+    onEnd("mouse");
+  }, {passive:true});
+
+  // touch fallback
+  play.addEventListener("touchstart", (e)=>{
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    onStart(t.clientX, t.clientY, "touch");
+  }, {passive:false});
+
+  play.addEventListener("touchmove", (e)=>{
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    onMove(t.clientX, t.clientY, "touch");
+  }, {passive:false});
+
+  play.addEventListener("touchend", (e)=>{
+    e.preventDefault();
+    onEnd("touch");
+  }, {passive:false});
+
+  /* ======================
+     判定：長い直線でまとめてOK（線分カバー）
+  ====================== */
+  function compress(ids){
+    const o=[];
+    for(const v of ids){
+      if(o.length===0 || o[o.length-1]!==v) o.push(v);
+    }
+    return o;
+  }
+
+  function segments(ids){
+    const s=[];
+    for(let i=0;i<ids.length-1;i++){
+      const a=ids[i], b=ids[i+1];
+      if(a==null || b==null || a===b) continue;
+      s.push([a,b]);
+    }
+    return s;
+  }
+
+  // segA（プレイヤー）が segB（お手本）を同一直線上で覆うか
+  function covers(segA, segB){
+    const p = idToNorm(segA[0]);
+    const q = idToNorm(segA[1]);
+    const r = idToNorm(segB[0]);
+    const s = idToNorm(segB[1]);
+
+    const vx = q.x - p.x, vy = q.y - p.y;
+    const wx = r.x - p.x, wy = r.y - p.y;
+    const cross = vx*wy - vy*wx;
+    if(Math.abs(cross) > 1e-3) return false;
+
+    const dot = (ax,ay,bx,by)=> ax*bx + ay*by;
+    const pq = dot(vx,vy,vx,vy);
+    if(pq < 1e-6) return false;
+
+    const proj = (pt)=> dot(pt.x-p.x, pt.y-p.y, vx, vy);
+    const r1 = proj(r), r2 = proj(s);
+    const minRS = Math.min(r1,r2);
+    const maxRS = Math.max(r1,r2);
+
+    return (minRS <= pq + 1e-6) && (maxRS >= 0 - 1e-6);
+  }
+
+  function isCorrect(){
+    const ansSegs = segments(compress(answer));
+    const mySegs  = segments(compress(hitIds));
+    if(mySegs.length === 0) return false;
+
+    // お手本線分が全部カバーされていればOK（起点・方向・途中点スキップOK）
+    return ansSegs.every(a => mySegs.some(p => covers(p,a)));
+  }
+
+  /* ======================
+     ボタン
+  ====================== */
+  function clearAll(msg="おてほんをみて なぞってね"){
+    drawPts = [];
+    hitIds  = [];
+    drawPlay();
+    setStatus(msg);
+    setDebug(`debug: cleared / events=${events}`);
+  }
+
+  doneBtn.addEventListener("click", ()=>{
+    if(drawPts.length < 2){
+      setStatus("まずは なぞってね🙂");
+      return;
+    }
+    if(hitIds.length < 2){
+      setStatus("点の近くをなぞってね（点を通ると判定が安定するよ）");
+      return;
+    }
+    if(isCorrect()){
+      setStatus("せいかい！🎉 つぎへ");
+      setTimeout(()=>{
+        answer = generateProblem();
+        clearAll("つぎの もんだい");
+        drawSample();
+      }, 650);
+    }else{
+      setStatus("ちがうよ。もういちど！（けす でやりなおし）");
+    }
+  });
+
+  nextBtn.addEventListener("click", ()=>{
+    answer = generateProblem();
+    clearAll("つぎの もんだい");
+    drawSample();
+  });
+
+  clearBtn.addEventListener("click", ()=>{
+    clearAll("やりなおし");
+  });
+
+  /* ======================
+     起動
+  ====================== */
+  bootResize();
+  drawSample();
+  drawPlay();
+})();
 </script>
 </body>
 </html>
-``
