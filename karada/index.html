@@ -62,7 +62,7 @@
     }
 
     .progressArea{
-      width: min(440px, 44vw);
+      width: min(420px, 40vw);
       display:flex;
       flex-direction:column;
       gap: 8px;
@@ -150,19 +150,6 @@
       display:block;
       background: rgba(0,0,0,.10);
     }
-    .imgHint{
-      position:absolute;
-      left:14px;
-      bottom:12px;
-      font-size: 13px;
-      color: rgba(238,242,255,.80);
-      background: rgba(0,0,0,.28);
-      border: 1px solid rgba(255,255,255,.12);
-      padding: 8px 10px;
-      border-radius: 14px;
-      backdrop-filter: blur(6px);
-      user-select:none;
-    }
 
     .right{
       padding: 16px;
@@ -173,7 +160,7 @@
     }
 
     .timerBox{
-      flex: 1;
+      flex: 0 0 auto;
       border-radius: 20px;
       background: rgba(0,0,0,.16);
       border: 1px solid rgba(255,255,255,.10);
@@ -181,8 +168,9 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      padding: 18px;
-      gap: 10px;
+      padding: 14px;
+      gap: 8px;
+      min-height: 210px;
       position:relative;
     }
     .timerLabel{
@@ -193,7 +181,7 @@
     }
     .timer{
       font-variant-numeric: tabular-nums;
-      font-size: clamp(56px, 8vw, 96px);
+      font-size: clamp(52px, 7.2vw, 90px);
       font-weight: 900;
       letter-spacing: .02em;
       line-height: 1;
@@ -208,11 +196,22 @@
       user-select:none;
     }
 
-    .btnRow{
+    .controls{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .btnRow1{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .btnRow2{
       display:grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
     }
+
     button{
       appearance:none;
       border: 1px solid rgba(255,255,255,.14);
@@ -224,7 +223,7 @@
       font-weight: 900;
       cursor:pointer;
       user-select:none;
-      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
       box-shadow: 0 10px 24px rgba(0,0,0,.25);
     }
     button:active{ transform: translateY(1px) scale(.99); }
@@ -234,9 +233,24 @@
       cursor:not-allowed;
       box-shadow:none;
     }
-    .start{ border-color: rgba(98,208,255,.45); background: rgba(98,208,255,.14); }
+
+    .start{
+      border-color: rgba(98,208,255,.55);
+      background: linear-gradient(180deg, rgba(98,208,255,.30), rgba(98,208,255,.12));
+      box-shadow:
+        0 18px 40px rgba(98,208,255,.18),
+        0 10px 24px rgba(0,0,0,.25);
+      font-size: 26px;
+      padding: 18px 14px;
+      border-radius: 20px;
+      letter-spacing: .06em;
+    }
+    .start:hover{
+      background: linear-gradient(180deg, rgba(98,208,255,.38), rgba(98,208,255,.14));
+    }
     .stop{ border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.12); }
     .next{ border-color: rgba(124,241,184,.45); background: rgba(124,241,184,.12); }
+    .prev{ border-color: rgba(185,194,255,.40); background: rgba(185,194,255,.10); }
 
     .overlay{
       position: fixed;
@@ -274,9 +288,7 @@
       font-weight: 800;
     }
 
-    .spacer{
-      height: 50vh;
-    }
+    .spacer{ height: 50vh; }
 
     .settings{
       margin-top: 26px;
@@ -376,9 +388,19 @@
       border-color: rgba(98,208,255,.30);
       box-shadow: 0 0 0 3px rgba(98,208,255,.08);
     }
-    .setRow.now .setLeft{
-      color: rgba(238,242,255,.98);
+    .setRow.now .setLeft{ color: rgba(238,242,255,.98); }
+
+    /* かみふぶき */
+    #confettiCanvas{
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 80;
+      display: none;
     }
+    #confettiCanvas.show{ display: block; }
 
     @media (max-width: 920px){
       header{ align-items:flex-start; }
@@ -389,8 +411,12 @@
       .progressArea{ width:100%; align-items:flex-start; }
       .mainInner{ grid-template-columns: 1fr; }
       .left{ border-right:none; border-bottom: 1px solid rgba(255,255,255,.10); }
-      .btnRow{ grid-template-columns: 1fr; }
+
+      .timerBox{ min-height: 190px; }
+      .btnRow2{ grid-template-columns: 1fr; }
       button{ font-size: 20px; padding: 16px 12px; }
+      .start{ font-size: 26px; padding: 18px 12px; }
+
       .setRow{ flex-direction:column; align-items:stretch; }
       .choices{ justify-content:flex-start; }
       .setLeft{ min-width:auto; }
@@ -399,6 +425,8 @@
 </head>
 
 <body>
+  <canvas id="confettiCanvas"></canvas>
+
   <div class="wrap">
     <header>
       <div class="titleArea">
@@ -421,7 +449,6 @@
         <div class="left">
           <div class="imgCard">
             <img id="sampleImg" alt="おてほんがぞう" src="" />
-            <div class="imgHint">がぞうは あとで さしかえ できます</div>
           </div>
         </div>
 
@@ -432,10 +459,15 @@
             <div id="status" class="status"> </div>
           </div>
 
-          <div class="btnRow">
-            <button id="btnStart" class="start">スタート</button>
-            <button id="btnStop" class="stop">ストップ</button>
-            <button id="btnNext" class="next">つぎへ</button>
+          <div class="controls" aria-label="ぼたん">
+            <div class="btnRow1">
+              <button id="btnStart" class="start">スタート</button>
+            </div>
+            <div class="btnRow2">
+              <button id="btnPrev" class="prev">まえへ</button>
+              <button id="btnStop" class="stop">ストップ</button>
+              <button id="btnNext" class="next">つぎへ</button>
+            </div>
           </div>
         </div>
       </div>
@@ -487,8 +519,9 @@
     const statusEl = document.getElementById("status");
 
     const btnStart = document.getElementById("btnStart");
-    const btnStop = document.getElementById("btnStop");
-    const btnNext = document.getElementById("btnNext");
+    const btnPrev  = document.getElementById("btnPrev");
+    const btnStop  = document.getElementById("btnStop");
+    const btnNext  = document.getElementById("btnNext");
 
     const overlay = document.getElementById("overlay");
     const cueTextEl = document.getElementById("cueText");
@@ -499,6 +532,10 @@
     const progressBar = document.getElementById("progressBar");
     const progressText = document.getElementById("progressText");
 
+    // confetti
+    const confettiCanvas = document.getElementById("confettiCanvas");
+    const cctx = confettiCanvas.getContext("2d");
+
     // state
     let idx = 0;
     let mode = "idle"; // idle | cue | running | paused | finished
@@ -508,8 +545,14 @@
     let cueTimers = [];
     let lastSpokenAt = 0;
 
+    // 10びょう かうんと
+    let lastCountdownSpoken = null;
+
     // progress
     const done = Array(menus.length).fill(false);
+
+    // audio
+    let audioCtx = null;
 
     // helpers
     function pad2(n){ return String(n).padStart(2,"0"); }
@@ -540,6 +583,9 @@
     function stopAllTimers(){
       clearCueTimers();
       if(tickTimer){ clearInterval(tickTimer); tickTimer = null; }
+      // おんせいも とめる
+      try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
+      lastCountdownSpoken = null;
     }
 
     function canChangeSetting(){
@@ -550,12 +596,12 @@
       try{
         if(!("speechSynthesis" in window)) return;
         const now = Date.now();
-        if(now - lastSpokenAt < 300) return;
+        if(now - lastSpokenAt < 220) return; // かさなり ぼうし
         lastSpokenAt = now;
 
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "ja-JP";
-        u.rate = 1.05;
+        u.rate = 1.08;
         u.pitch = 1.0;
         u.volume = 1.0;
 
@@ -588,17 +634,15 @@
         if(i === idx) s.classList.add("now");
       });
       const doneCount = done.filter(Boolean).length;
-      progressText.textContent = `${doneCount}/10`;
+      progressText.textContent = `${doneCount}/${menus.length}`;
     }
 
     // settings ui
     function buildSettings(){
       settingsBody.innerHTML = "";
 
-      // top row: apply all
       settingsBody.appendChild(buildSetRowAll());
 
-      // each menu row
       menus.forEach((m, i) => {
         settingsBody.appendChild(buildSetRow(i));
       });
@@ -678,7 +722,6 @@
       label.appendChild(text);
 
       label.addEventListener("click", (e) => {
-        // allow clicking on label anywhere
         e.preventDefault();
         if(!canChangeSetting()){
           showOverlay("ストップしてね", "");
@@ -723,7 +766,6 @@
       menus[i].seconds = sec;
       syncRowSecondsLabel(i);
 
-      // if current menu, update timer to base and reset mode to idle
       if(i === idx){
         remainingMs = sec * 1000;
         timerEl.textContent = fmt(remainingMs);
@@ -741,7 +783,6 @@
         setGroupExclusive(String(i), sec);
       });
 
-      // update current
       remainingMs = menus[idx].seconds * 1000;
       timerEl.textContent = fmt(remainingMs);
       baseTimeInfo.textContent = `きほん じかん ${menus[idx].seconds} びょう`;
@@ -757,14 +798,15 @@
     }
 
     function setSettingsEnabled(enabled){
-      // disable all checkboxes while running/cue
       const inputs = [...settingsBody.querySelectorAll("input[type='checkbox']")];
       inputs.forEach(i => i.disabled = !enabled);
     }
 
     function updateButtons(){
-      btnStop.disabled = (mode === "idle" || mode === "finished");
-      btnNext.disabled = (mode === "cue" || mode === "running");
+      const locked = (mode === "cue" || mode === "running");
+      btnStop.disabled  = (mode === "idle" || mode === "finished");
+      btnNext.disabled  = locked;
+      btnPrev.disabled  = locked;
       btnStart.disabled = (mode === "cue");
       setSettingsEnabled(canChangeSetting());
     }
@@ -774,22 +816,189 @@
       const m = menus[idx];
 
       menuTitle.textContent = m.title;
-      menuCount.textContent = `${idx+1}/10`;
+      menuCount.textContent = `${idx+1}/${menus.length}`;
       baseTimeInfo.textContent = `きほん じかん ${m.seconds} びょう`;
 
       sampleImg.src = m.img;
-      sampleImg.onerror = () => {
-        sampleImg.removeAttribute("src");
-      };
+      sampleImg.onerror = () => { sampleImg.removeAttribute("src"); };
 
       remainingMs = m.seconds * 1000;
       timerEl.textContent = fmt(remainingMs);
       setStatus("");
       mode = "idle";
+      lastCountdownSpoken = null;
       updateButtons();
 
       updateProgress();
       updateSettingsHighlight();
+    }
+
+    // ========= 10びょう かうんと =========
+    function maybeSpeakCountdown(){
+      if(mode !== "running") return;
+      const secLeft = Math.ceil(remainingMs / 1000);
+
+      // 10 -> 1 を 1かいずつ いう
+      if(secLeft <= 10 && secLeft >= 1){
+        if(lastCountdownSpoken !== secLeft){
+          lastCountdownSpoken = secLeft;
+          speak(String(secLeft));
+        }
+      }else if(secLeft > 10){
+        lastCountdownSpoken = null;
+      }
+    }
+
+    // ========= ふぁんふぁーれ =========
+    function ensureAudio(){
+      if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(audioCtx.state === "suspended"){
+        audioCtx.resume().catch(()=>{});
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, startAt, dur, type="sine", gain=0.12){
+      const ctx = ensureAudio();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, startAt);
+      g.gain.exponentialRampToValueAtTime(gain, startAt + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+
+      o.connect(g);
+      g.connect(ctx.destination);
+
+      o.start(startAt);
+      o.stop(startAt + dur + 0.02);
+    }
+
+    function playFanfare(){
+      try{
+        const ctx = ensureAudio();
+        const t0 = ctx.currentTime + 0.02;
+
+        // かんたん ふぁんふぁーれ（2せいぶ）
+        // main
+        const notes = [
+          [523.25, 0.00, 0.14], // C5
+          [659.25, 0.14, 0.14], // E5
+          [783.99, 0.28, 0.18], // G5
+          [1046.5,0.46, 0.26],  // C6
+          [987.77,0.74, 0.18],  // B5
+          [1046.5,0.92, 0.34],  // C6
+        ];
+        notes.forEach(([f, off, d]) => playTone(f, t0 + off, d, "triangle", 0.14));
+
+        // harmony
+        const harm = [
+          [392.00, 0.00, 0.28], // G4
+          [493.88, 0.28, 0.44], // B4
+          [523.25, 0.72, 0.54], // C5
+        ];
+        harm.forEach(([f, off, d]) => playTone(f, t0 + off, d, "sine", 0.09));
+
+        // little sparkle
+        playTone(1567.98, t0 + 0.46, 0.10, "square", 0.06);
+        playTone(2093.00, t0 + 0.56, 0.10, "square", 0.05);
+      }catch(e){}
+    }
+
+    // ========= かみふぶき =========
+    let confettiAnim = null;
+    let confettiStopAt = 0;
+    let confettiParts = [];
+
+    function resizeConfetti(){
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = window.innerWidth + "px";
+      confettiCanvas.style.height = window.innerHeight + "px";
+      cctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    window.addEventListener("resize", () => {
+      if(confettiCanvas.classList.contains("show")) resizeConfetti();
+    });
+
+    function launchConfetti(ms=2200){
+      resizeConfetti();
+      confettiCanvas.classList.add("show");
+
+      const W = window.innerWidth, H = window.innerHeight;
+      const colors = ["#62d0ff","#7cf1b8","#b9c2ff","#ffd166","#ff6b6b","#ffffff"];
+      const n = Math.min(180, Math.floor(W * 0.18));
+
+      confettiParts = [];
+      for(let i=0;i<n;i++){
+        confettiParts.push({
+          x: Math.random()*W,
+          y: -20 - Math.random()*H*0.3,
+          r: 3 + Math.random()*5,
+          w: 6 + Math.random()*10,
+          h: 6 + Math.random()*12,
+          vx: -1.2 + Math.random()*2.4,
+          vy: 2.6 + Math.random()*4.8,
+          rot: Math.random()*Math.PI,
+          vr: -0.18 + Math.random()*0.36,
+          col: colors[(Math.random()*colors.length)|0],
+          shape: Math.random() < 0.55 ? "rect" : "circle",
+          alpha: 0.95
+        });
+      }
+
+      confettiStopAt = performance.now() + ms;
+      if(confettiAnim) cancelAnimationFrame(confettiAnim);
+
+      const step = (t) => {
+        const now = t || performance.now();
+        cctx.clearRect(0,0,W,H);
+
+        confettiParts.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vr;
+          p.vy += 0.02; // ちょい かじゅう
+          if(now > confettiStopAt - 700){
+            p.alpha *= 0.985;
+          }
+          if(p.y > H + 40){
+            p.y = -20;
+            p.x = Math.random()*W;
+            p.vy = 2.6 + Math.random()*4.8;
+            p.alpha = 0.95;
+          }
+
+          cctx.save();
+          cctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+          cctx.translate(p.x, p.y);
+          cctx.rotate(p.rot);
+          cctx.fillStyle = p.col;
+
+          if(p.shape === "rect"){
+            cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+          }else{
+            cctx.beginPath();
+            cctx.arc(0,0,p.r,0,Math.PI*2);
+            cctx.fill();
+          }
+          cctx.restore();
+        });
+
+        if(now < confettiStopAt){
+          confettiAnim = requestAnimationFrame(step);
+        }else{
+          confettiCanvas.classList.remove("show");
+          cctx.clearRect(0,0,W,H);
+          confettiAnim = null;
+        }
+      };
+
+      confettiAnim = requestAnimationFrame(step);
     }
 
     function finish(){
@@ -800,7 +1009,11 @@
       setStatus("よくできました");
       done[idx] = true;
       updateProgress();
-      speak("やめ");
+
+      // しゅうりょう えんしゅつ
+      playFanfare();
+      launchConfetti(2400);
+
       updateButtons();
     }
 
@@ -810,6 +1023,9 @@
       hideOverlay();
       updateButtons();
 
+      // のこりじかん 10びょう かうんと りせっと
+      lastCountdownSpoken = null;
+
       const endAt = Date.now() + remainingMs;
 
       if(tickTimer) clearInterval(tickTimer);
@@ -817,6 +1033,9 @@
         const now = Date.now();
         remainingMs = Math.max(0, endAt - now);
         timerEl.textContent = fmt(remainingMs);
+
+        // 10びょう かうんと
+        maybeSpeakCountdown();
 
         if(remainingMs <= 0){
           clearInterval(tickTimer);
@@ -845,6 +1064,9 @@
       steps.forEach((s) => {
         cueTimers.push(setTimeout(() => {
           showOverlay(s.t, "");
+          // きっかけのときに audio を うごかせる ように
+          //（ぶらうざに よっては じぇすちゃー ひつよう）
+          try{ ensureAudio(); }catch(e){}
         }, total));
         total += s.ms;
       });
@@ -856,6 +1078,9 @@
 
     function onStart(){
       if(mode === "running" || mode === "cue") return;
+
+      // audio は ここでも きどうしておく
+      try{ ensureAudio(); }catch(e){}
 
       if(mode === "paused"){
         cueSequenceThenStart(false);
@@ -897,10 +1122,19 @@
       loadMenu(idx + 1);
     }
 
+    function onPrev(){
+      if(mode === "cue" || mode === "running") return;
+      stopAllTimers();
+      hideOverlay();
+      setStatus("");
+      loadMenu(idx - 1);
+    }
+
     // bind
     btnStart.addEventListener("click", onStart);
     btnStop.addEventListener("click", onStop);
     btnNext.addEventListener("click", onNext);
+    btnPrev.addEventListener("click", onPrev);
 
     // init
     buildProgress();
