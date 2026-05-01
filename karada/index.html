@@ -418,6 +418,96 @@
     }
     #confettiCanvas.show{ display: block; }
 
+    /* ===== ★ おうえん（10びょうごと）オーバーレイ ===== */
+    .cheer{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 65; /* cue overlay(50) より上、confetti(80) より下 */
+      padding: 18px;
+      background: rgba(0,0,0,.58);
+      backdrop-filter: blur(10px);
+      /* みためはぜんがめん、でも さわっても うしろの ぼたんを おせるように */
+      pointer-events: none;
+    }
+    .cheer.show{ display:flex; }
+
+    @keyframes cheerPop {
+      0% { transform: translateY(10px) scale(.96); opacity: 0; }
+      55% { transform: translateY(0) scale(1.02); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .cheerCard{
+      width: min(860px, 100%);
+      border-radius: 30px;
+      background: rgba(18,26,51,.92);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 28px 80px rgba(0,0,0,.55);
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 16px;
+      align-items: center;
+      animation: cheerPop .22s ease-out both;
+    }
+
+    .cheerAvatar{
+      width: 170px;
+      height: 170px;
+      border-radius: 26px;
+      overflow: hidden;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+    .cheerAvatar img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* 正方形想定 */
+      display:block;
+    }
+
+    .cheerBubble{
+      border-radius: 26px;
+      padding: 18px 18px;
+      background: linear-gradient(180deg, rgba(98,208,255,.18), rgba(255,255,255,.06));
+      border: 1px solid rgba(98,208,255,.30);
+      box-shadow: 0 16px 42px rgba(0,0,0,.35);
+      position: relative;
+      min-height: 130px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .cheerBubble:before{
+      content:"";
+      position:absolute;
+      left:-12px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+      width: 22px;
+      height: 22px;
+      background: rgba(98,208,255,.14);
+      border-left: 1px solid rgba(98,208,255,.30);
+      border-bottom: 1px solid rgba(98,208,255,.30);
+    }
+
+    .cheerMsg{
+      font-size: clamp(28px, 4.2vw, 54px);
+      font-weight: 900;
+      letter-spacing: .04em;
+      line-height: 1.15;
+      text-align: center;
+      text-shadow: 0 10px 34px rgba(0,0,0,.40);
+      white-space: pre-line; /* 改行を有効に */
+    }
+
     @media (max-width: 920px){
       header{ align-items:flex-start; }
       .progressArea{ width: min(520px, 58vw); }
@@ -436,6 +526,23 @@
       .setRow{ flex-direction:column; align-items:stretch; }
       .choices{ justify-content:flex-start; }
       .setLeft{ min-width:auto; }
+
+      .cheerCard{
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .cheerAvatar{
+        width: 160px;
+        height: 160px;
+        margin: 0 auto;
+      }
+      .cheerBubble:before{
+        left: 50%;
+        top: -12px;
+        transform: translateX(-50%) rotate(45deg);
+        border-left: 1px solid rgba(98,208,255,.30);
+        border-bottom: 1px solid rgba(98,208,255,.30);
+      }
     }
   </style>
 </head>
@@ -509,6 +616,18 @@
     </div>
   </div>
 
+  <!-- ★ おうえん オーバーレイ -->
+  <div class="cheer" id="cheerOverlay" aria-hidden="true">
+    <div class="cheerCard">
+      <div class="cheerAvatar">
+        <img id="cheerImg" alt="おうえん きゃら" src="" />
+      </div>
+      <div class="cheerBubble">
+        <div id="cheerMsg" class="cheerMsg"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // menu data
     const menus = [
@@ -557,6 +676,11 @@
     const confettiCanvas = document.getElementById("confettiCanvas");
     const cctx = confettiCanvas.getContext("2d");
 
+    // ★ cheer overlay
+    const cheerOverlay = document.getElementById("cheerOverlay");
+    const cheerImg = document.getElementById("cheerImg");
+    const cheerMsg = document.getElementById("cheerMsg");
+
     // state
     let idx = 0;
     let mode = "idle"; // idle | cue | running | paused | finished
@@ -578,6 +702,10 @@
 
     // audio
     let audioCtx = null;
+
+    // ★ cheer scheduler state
+    let cheerNextAt = 0;
+    let cheerHideTimer = null;
 
     // helpers
     function pad2(n){ return String(n).padStart(2,"0"); }
@@ -605,12 +733,98 @@
       cueTimers = [];
     }
 
+    // ===== ★ cheer logic =====
+    const CHEER_DATA = [
+      {
+        id: "A",
+        src: "assets/a.png",
+        msgs: [
+          "がんばれ",
+          "いいぞ",
+          "しゅうちゅう！",
+          "がんばってくだ…\nさい！"
+        ]
+      },
+      {
+        id: "B",
+        src: "assets/b.png",
+        msgs: [
+          "しゅりちゃん　がんばって",
+          "しゅりちゃん　すごい",
+          "しゅりちゃん　かっこいい"
+        ]
+      },
+      {
+        id: "C",
+        src: "assets/c.png",
+        msgs: [
+          "コジコジは　コジコジだよ"
+        ]
+      }
+    ];
+
+    function showCheer(src, msg){
+      try{
+        cheerImg.src = src;
+        cheerMsg.textContent = msg;
+        cheerOverlay.classList.add("show");
+        cheerOverlay.setAttribute("aria-hidden", "false");
+        if(cheerHideTimer) clearTimeout(cheerHideTimer);
+        cheerHideTimer = setTimeout(() => {
+          hideCheer();
+        }, 2000);
+      }catch(e){}
+    }
+
+    function hideCheer(){
+      cheerOverlay.classList.remove("show");
+      cheerOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    function resetCheer(){
+      cheerNextAt = 0;
+      if(cheerHideTimer){ clearTimeout(cheerHideTimer); cheerHideTimer = null; }
+      hideCheer();
+    }
+
+    function pickRandomCheer(){
+      const c = CHEER_DATA[randInt(CHEER_DATA.length)];
+      const msg = c.msgs[randInt(c.msgs.length)];
+      return { src: c.src, msg };
+    }
+
+    function maybeCheer(now){
+      if(mode !== "running") return;
+      if(!cheerNextAt) return;
+
+      // ラスト10びょうは ださない
+      if(remainingMs <= 10000) return;
+
+      if(now >= cheerNextAt){
+        const { src, msg } = pickRandomCheer();
+        showCheer(src, msg);
+
+        // 次回（遅れても等間隔を保つ）
+        do{
+          cheerNextAt += 10000;
+        }while(now >= cheerNextAt);
+      }
+    }
+
+    function armCheer(){
+      // 10びょうごと（開始10秒後から）
+      cheerNextAt = Date.now() + 10000;
+    }
+
     function stopAllTimers(){
       clearCueTimers();
       if(tickTimer){ clearInterval(tickTimer); tickTimer = null; }
       // おんせいも とめる
       try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
       lastCountdownSpoken = null;
+
+      // ★ cheer stop
+      resetCheer();
     }
 
     function canChangeSetting(){
@@ -978,6 +1192,9 @@
       lastCountdownSpoken = null;
       updateButtons();
 
+      // ★ 応援もリセット
+      resetCheer();
+
       updateProgress();
       updateSettingsHighlight();
     }
@@ -1173,10 +1390,14 @@
       mode = "running";
       setStatus("");
       hideOverlay();
+      hideCheer();
       updateButtons();
 
       // のこりじかん 10びょう かうんと りせっと
       lastCountdownSpoken = null;
+
+      // ★ 応援スケジューラ開始（10秒後から）
+      armCheer();
 
       const endAt = Date.now() + remainingMs;
 
@@ -1188,6 +1409,9 @@
 
         // 10びょう かうんと
         maybeSpeakCountdown();
+
+        // ★ 10びょうごと おうえん（ラスト10びょうは出さない）
+        maybeCheer(now);
 
         if(remainingMs <= 0){
           clearInterval(tickTimer);
