@@ -16,6 +16,7 @@
       --danger:#ff6b6b;
       --shadow: 0 18px 50px rgba(0,0,0,.35);
       --radius: 22px;
+      --topShift: 22px;
     }
     *{box-sizing:border-box}
     body{
@@ -32,7 +33,7 @@
     .wrap{
       max-width: 1100px;
       margin: 0 auto;
-      padding: 18px 14px 90px;
+      padding: calc(18px + var(--topShift)) 14px 90px;
       position: relative;
     }
 
