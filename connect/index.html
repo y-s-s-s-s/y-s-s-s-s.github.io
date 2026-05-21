@@ -70,7 +70,8 @@
   }
   .backBtn:active{ transform:scale(.97); filter:brightness(1.1); }
 
-  .wrap{ width:min(520px, 96vw); }
+  /* ★ 横並びにするため、全体幅を少し広げる（でもスマホは自然に収まる） */
+  .wrap{ width:min(980px, 96vw); }
 
   h1{
     margin:2px 0 6px;
@@ -80,12 +81,34 @@
     letter-spacing:.02em;
   }
 
-  .card{
+  /* ===== ★ ここが変更ポイント：お手本＆回答を横並び ===== */
+  .boards{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    align-items:flex-start;
+    flex-wrap:wrap; /* 狭いときは自動で縦並び */
+  }
+
+  /* ★ 20%小さく：元の 520px を基準に 0.8倍 ≒ 416px を上限にする */
+  .cardBoard{
     background:var(--card);
     border-radius:12px;
     padding:4px;        /* 白余白を削減 */
     margin-bottom:6px;  /* 間隔を削減 */
     box-shadow: var(--shadow);
+
+    width: min(416px, 46vw); /* 2枚横並びでも収まるように調整 */
+  }
+
+  .label{
+    margin:2px 0 4px;
+    text-align:center;
+    font-size:12px;
+    font-weight:1000;
+    letter-spacing:.08em;
+    color: rgba(0,0,0,.72);
+    user-select:none;
   }
 
   canvas.board{
@@ -133,9 +156,16 @@
     line-height:1.35;
   }
 
+  @media (max-width:860px){
+    /* 画面が狭い場合は、2枚を縦並びにしつつ自然なサイズに */
+    .cardBoard{
+      width: min(416px, 96vw);
+    }
+  }
+
   @media (max-width:380px){
     body{ padding:3px; }
-    .card{ padding:3px; margin-bottom:5px; }
+    .cardBoard{ padding:3px; margin-bottom:5px; }
     h1{ font-size:16px; margin:2px 0 5px; }
     .hint{ display:none; }
     button{ padding:9px 12px; font-size:14px; }
@@ -150,12 +180,17 @@
   <div class="wrap">
     <h1>てんつなぎ</h1>
 
-    <div class="card">
-      <canvas class="board" id="sample"></canvas>
-    </div>
+    <!-- ★ 横並び：お手本（左）＋回答（右） -->
+    <div class="boards">
+      <div class="cardBoard">
+        <div class="label">おてほん</div>
+        <canvas class="board" id="sample"></canvas>
+      </div>
 
-    <div class="card">
-      <canvas class="board" id="play"></canvas>
+      <div class="cardBoard">
+        <div class="label">こたえ</div>
+        <canvas class="board" id="play"></canvas>
+      </div>
     </div>
 
     <div class="row">
@@ -322,6 +357,7 @@
 
   /* ======================
      Canvasサイズ
+     ※ 横並びでカード幅が変わるので、両方を個別にリサイズ
   ====================== */
   function resizeCanvas(c){
     const r = c.getBoundingClientRect();
@@ -356,8 +392,8 @@
     const {i,j} = idToIJ(id);
     const cand = [];
     const dirs = [
-      [-1,0],[1,0],[0,-1],[0,1],     // 4近傍
-      [-1,-1],[-1,1],[1,-1],[1,1]   // 斜め4近傍
+      [-1,0],[1,0],[0,-1],[0,1],
+      [-1,-1],[-1,1],[1,-1],[1,1]
     ];
     for(const [di,dj] of dirs){
       const ni=i+di, nj=j+dj;
@@ -381,7 +417,6 @@
     return Math.abs(cross) < eps;
   }
 
-  // 表示用：同一直線の中間点を削る（水平/垂直/斜めすべて対応）
   function compressCollinearIds(ids){
     const clean = compressSeq(ids);
     if(clean.length <= 2) return clean;
@@ -410,7 +445,7 @@
 
   function generateProblemWithVisibleCount(){
     for(let t=0;t<GEN_TRIES;t++){
-      const rawLen = randInt(30, 52);  // 斜めも入るので少し長め
+      const rawLen = randInt(30, 52);
       const answer = generateRawWalk(rawLen);
       const view = compressCollinearIds(answer);
       if(view.length >= MIN_VISIBLE_POINTS && view.length <= MAX_VISIBLE_POINTS){
@@ -472,7 +507,7 @@
   /* ======================
      プレイ：直線化ストローク
   ====================== */
-  let strokes = []; // { idsView:[], ptsView:[{x,y}...], edgeSet:Set<string> }
+  let strokes = [];
   let drawing = false;
   let rawPts = [];
 
@@ -539,14 +574,12 @@
 
   /* ======================
      厳密判定（斜め対応）
-     表示用idsViewから「単位エッジ集合」を作る（縦横＋斜め）
   ====================== */
   function edgeKey(a,b){
     const lo = Math.min(a,b), hi = Math.max(a,b);
     return lo + "-" + hi;
   }
 
-  // ★斜め対応：di,dj が (0,±k) / (±k,0) / (±k,±k) を許可
   function unitEdgesFromViewIds(idsView){
     const set = new Set();
     for(let i=0;i<idsView.length-1;i++){
@@ -558,9 +591,8 @@
       const di = bi - ai;
       const dj = bj - aj;
 
-      // 許可：水平/垂直/斜め（45度）
       const isHV = (di === 0 && dj !== 0) || (dj === 0 && di !== 0);
-      const isDiag = (Math.abs(di) === Math.abs(dj) && di !== 0); // 斜め
+      const isDiag = (Math.abs(di) === Math.abs(dj) && di !== 0);
       if(!(isHV || isDiag)) return null;
 
       const stepI = di === 0 ? 0 : (di > 0 ? 1 : -1);
