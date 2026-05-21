@@ -28,11 +28,36 @@
         var(--bg);
       color:var(--text);
     }
+
     .wrap{
       max-width: 1100px;
       margin: 0 auto;
       padding: 18px 14px 90px;
+      position: relative;
     }
+
+    /* ===== ★ 右上「もどる」ボタン ===== */
+    .backBtn{
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 200;
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(18,26,51,.65);
+      backdrop-filter: blur(8px);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      box-shadow: 0 12px 28px rgba(0,0,0,.35);
+      cursor: pointer;
+      user-select: none;
+      transition: transform .06s ease, background .2s ease;
+    }
+    .backBtn:hover{ background: rgba(18,26,51,.78); }
+    .backBtn:active{ transform: translateY(1px) scale(.99); }
 
     header{
       display:flex;
@@ -62,7 +87,6 @@
     }
 
     .progressArea{
-      /* 11個になったので少し広げる */
       width: min(480px, 46vw);
       display:flex;
       flex-direction:column;
@@ -70,12 +94,9 @@
       align-items:flex-end;
     }
 
-    /* ★「シンチョク」文字は削除（progressHead 自体を使わない） */
-
     .progressBar{
       width:100%;
       display:grid;
-      /* ★ 10 → 11 */
       grid-template-columns: repeat(11, 1fr);
       gap: 6px;
       padding: 10px;
@@ -85,7 +106,6 @@
       box-shadow: 0 10px 26px rgba(0,0,0,.25);
     }
 
-    /* ★ 進捗（タマゴ/キャラ表示） */
     .seg{
       height: 34px;
       border-radius: 14px;
@@ -541,7 +561,7 @@
       pointer-events: none;
     }
 
-    /* ★ 11個に増えたので、PCは 6×2(最大12) にして余り1枠を許容 */
+    /* PC: 6×2(最大12) */
     .endingCharsArea{
       position:absolute;
       left: 10%;
@@ -555,7 +575,7 @@
       align-items: center;
       justify-items: center;
       padding: 10px;
-      pointer-events: none; /* タップは画面全体で拾う */
+      pointer-events: none;
     }
 
     @keyframes swing20 {
@@ -565,7 +585,6 @@
     }
 
     .endChar{
-      /* 11個表示で少し小さく */
       width: min(120px, 14vw);
       height: min(120px, 14vw);
       max-width: 140px;
@@ -626,7 +645,7 @@
         border-bottom: 1px solid rgba(98,208,255,.30);
       }
 
-      /* ★ スマホは 4×3(最大12) で見やすく */
+      /* スマホ: 4×3(最大12) */
       .endingCharsArea{
         left: 6%;
         top: 10%;
@@ -647,6 +666,9 @@
 <body>
   <canvas id="confettiCanvas"></canvas>
 
+  <!-- ★ 右上「もどる」 -->
+  <button class="backBtn" id="backBtn" type="button">もどる</button>
+
   <div class="wrap">
     <header>
       <div class="titleArea">
@@ -658,7 +680,6 @@
       </div>
 
       <div class="progressArea" aria-label="しんちょく">
-        <!-- ★ シンチョク文字を削除 -->
         <div id="progressBar" class="progressBar"></div>
         <div id="progressText" class="progressText"> </div>
       </div>
@@ -700,9 +721,7 @@
         <div>せってい</div>
         <div class="settingsNote">うごいているときは かえられません（ストップ してね）</div>
       </div>
-      <div class="settingsBody" id="settingsBody">
-        <!-- js -->
-      </div>
+      <div class="settingsBody" id="settingsBody"></div>
     </section>
   </div>
 
@@ -735,7 +754,12 @@
   </div>
 
   <script>
-    // menu data
+    // ★ もどるボタン
+    document.getElementById("backBtn").addEventListener("click", () => {
+      location.href = "../index.html";
+    });
+
+    // menu data（11こ）
     const menus = [
       { title: "かたあしだち（みぎ）", seconds: 60, img: "assets/01.png" },
       { title: "かたあしだち（ひだり）", seconds: 60, img: "assets/02.png" },
@@ -747,14 +771,12 @@
       { title: "ゴムとび", seconds: 60, img: "assets/08.png" },
       { title: "まめつかみ", seconds: 60, img: "assets/09.png" },
       { title: "てつぼうぶらさがり", seconds: 15, img: "assets/10.png" },
-
-      // ★ 追加：11こめ
       { title: "ふろしき", seconds: 120, img: "assets/11.png" },
     ];
 
     const TIME_CHOICES = [15,30,60,90,120,180];
 
-    // ★ progress egg/character settings
+    // progress egg/character settings
     const EGG_SRC = "assets/tamago.png";
     const MANIFEST_URL = "../count/assets/items/manifest.json";
     const MANIFEST_BASE_DIR = "../count/assets/items/";
@@ -785,12 +807,12 @@
     const confettiCanvas = document.getElementById("confettiCanvas");
     const cctx = confettiCanvas.getContext("2d");
 
-    // ★ cheer overlay
+    // cheer overlay
     const cheerOverlay = document.getElementById("cheerOverlay");
     const cheerImg = document.getElementById("cheerImg");
     const cheerMsg = document.getElementById("cheerMsg");
 
-    // ★ ending overlay
+    // ending overlay
     const endingOverlay = document.getElementById("endingOverlay");
     const endingCharsArea = document.getElementById("endingCharsArea");
 
@@ -809,22 +831,21 @@
     // progress
     const done = Array(menus.length).fill(false);
 
-    // ★ egg hatch state (null = egg, string = character image url)
+    // egg hatch state
     const hatchImg = Array(menus.length).fill(null);
-    const usedChar = new Set(); // avoid duplicates if possible
+    const usedChar = new Set();
 
     // audio
     let audioCtx = null;
 
-    // ★ cheer scheduler state
+    // cheer scheduler state
     let cheerNextAt = 0;
     let cheerHideTimer = null;
 
-    // ★ ending scheduler
+    // ending scheduler
     let endingTimer = null;
     let endingShown = false;
 
-    // helpers
     function pad2(n){ return String(n).padStart(2,"0"); }
     function fmt(ms){
       const total = Math.max(0, Math.ceil(ms / 1000));
@@ -850,35 +871,11 @@
       cueTimers = [];
     }
 
-    // ===== ★ cheer logic =====
+    // cheer logic
     const CHEER_DATA = [
-      {
-        id: "A",
-        src: "assets/a.png",
-        msgs: [
-          "がんばれ！",
-          "いいぞ！",
-          "しゅうちゅう！",
-        ]
-      },
-      {
-        id: "B",
-        src: "assets/b.png",
-        msgs: [
-          "がんばって",
-          "すごい",
-          "かっこいい"
-        ]
-      },
-      {
-        id: "C",
-        src: "assets/c.png",
-        msgs: [
-          "がんばってね",
-          "すごいね",
-          "コジコジはコジコジだよ"
-        ]
-      }
+      { id:"A", src:"assets/a.png", msgs:["がんばれ！","いいぞ！","しゅうちゅう！"] },
+      { id:"B", src:"assets/b.png", msgs:["がんばって","すごい","かっこいい"] },
+      { id:"C", src:"assets/c.png", msgs:["がんばってね","すごいね","コジコジはコジコジだよ"] }
     ];
 
     function showCheer(src, msg){
@@ -888,9 +885,7 @@
         cheerOverlay.classList.add("show");
         cheerOverlay.setAttribute("aria-hidden", "false");
         if(cheerHideTimer) clearTimeout(cheerHideTimer);
-        cheerHideTimer = setTimeout(() => {
-          hideCheer();
-        }, 2000);
+        cheerHideTimer = setTimeout(() => hideCheer(), 2000);
       }catch(e){}
     }
 
@@ -905,6 +900,12 @@
       hideCheer();
     }
 
+    function randInt(max){
+      if(max <= 0) return 0;
+      const c = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 0xFFFFFFFF);
+      return c % max;
+    }
+
     function pickRandomCheer(){
       const c = CHEER_DATA[randInt(CHEER_DATA.length)];
       const msg = c.msgs[randInt(c.msgs.length)];
@@ -914,34 +915,25 @@
     function maybeCheer(now){
       if(mode !== "running") return;
       if(!cheerNextAt) return;
-
-      // ラスト10びょうは ださない
-      if(remainingMs <= 10000) return;
+      if(remainingMs <= 10000) return; // ラスト10びょうは ださない
 
       if(now >= cheerNextAt){
         const { src, msg } = pickRandomCheer();
         showCheer(src, msg);
 
-        // 次回（遅れても等間隔を保つ）
-        do{
-          cheerNextAt += 15000;
-        }while(now >= cheerNextAt);
+        do{ cheerNextAt += 15000; }while(now >= cheerNextAt);
       }
     }
 
     function armCheer(){
-      // 15びょうごと（開始15秒後から）
       cheerNextAt = Date.now() + 15000;
     }
 
     function stopAllTimers(){
       clearCueTimers();
       if(tickTimer){ clearInterval(tickTimer); tickTimer = null; }
-      // おんせいも とめる
       try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
       lastCountdownSpoken = null;
-
-      // ★ cheer stop
       resetCheer();
     }
 
@@ -953,7 +945,7 @@
       try{
         if(!("speechSynthesis" in window)) return;
         const now = Date.now();
-        if(now - lastSpokenAt < 220) return; // かさなり ぼうし
+        if(now - lastSpokenAt < 220) return;
         lastSpokenAt = now;
 
         const u = new SpeechSynthesisUtterance(text);
@@ -971,9 +963,9 @@
       }catch(e){}
     }
 
-    // ========= ★ manifest loader（キャラ画像一覧） =========
+    // manifest loader（キャラ画像一覧）
     let _charListPromise = null;
-    let _charListCache = null; // ★ 取得済みを保持
+    let _charListCache = null;
 
     function isImageUrl(u){
       const s = String(u || "");
@@ -1053,12 +1045,6 @@
       return _charListPromise;
     }
 
-    function randInt(max){
-      if(max <= 0) return 0;
-      const c = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 0xFFFFFFFF);
-      return c % max;
-    }
-
     async function hatchEggAt(i){
       if(hatchImg[i]) return;
       const list = await loadCharacterList();
@@ -1104,12 +1090,8 @@
 
         const img = s.querySelector("img");
         const src = hatchImg[i] ? hatchImg[i] : EGG_SRC;
-        if(img && img.src !== src){
-          img.src = src;
-        }
-        if(img){
-          img.alt = hatchImg[i] ? "キャラクター" : "タマゴ";
-        }
+        if(img && img.src !== src) img.src = src;
+        if(img) img.alt = hatchImg[i] ? "キャラクター" : "タマゴ";
       });
       const doneCount = done.filter(Boolean).length;
       progressText.textContent = `${doneCount}/${menus.length}`;
@@ -1118,13 +1100,8 @@
     // settings ui
     function buildSettings(){
       settingsBody.innerHTML = "";
-
       settingsBody.appendChild(buildSetRowAll());
-
-      menus.forEach((m, i) => {
-        settingsBody.appendChild(buildSetRow(i));
-      });
-
+      menus.forEach((m, i) => settingsBody.appendChild(buildSetRow(i)));
       updateSettingsHighlight();
       setSettingsEnabled(canChangeSetting());
     }
@@ -1307,14 +1284,12 @@
       lastCountdownSpoken = null;
       updateButtons();
 
-      // ★ 応援もリセット
       resetCheer();
-
       updateProgress();
       updateSettingsHighlight();
     }
 
-    // ========= 10びょう かうんと =========
+    // 10びょう かうんと
     function maybeSpeakCountdown(){
       if(mode !== "running") return;
       const secLeft = Math.ceil(remainingMs / 1000);
@@ -1329,17 +1304,12 @@
       }
     }
 
-    // ========= ★ エンディング =========
-    function allDone(){
-      return done.every(Boolean);
-    }
+    // エンディング
+    function allDone(){ return done.every(Boolean); }
 
     function allHatchedOrNoManifest(){
-      // manifestが空なら「キャラがない」ので条件で止めない
       if(_charListCache && _charListCache.length === 0) return true;
-      // まだ読めてない間は、いったん「全孵化チェック」を厳密にしない
       if(_charListCache == null) return hatchImg.filter(Boolean).length === menus.length;
-      // 通常
       return hatchImg.every(Boolean);
     }
 
@@ -1350,7 +1320,6 @@
         im.className = "endChar";
         im.alt = "キャラクター";
         im.src = hatchImg[i] || EGG_SRC;
-        // ちょいずらし：全員同じ揺れだと固いので位相を変える
         im.style.animationDelay = (i * 0.12) + "s";
         endingCharsArea.appendChild(im);
       }
@@ -1389,12 +1358,9 @@
       }, 3000);
     }
 
-    // タップ1回で終了
-    endingOverlay.addEventListener("click", () => {
-      hideEnding();
-    }, { passive: true });
+    endingOverlay.addEventListener("click", () => hideEnding(), { passive: true });
 
-    // ========= ふぁんふぁーれ =========
+    // ===== ★ ファンファーレ（WebAudio） =====
     function ensureAudio(){
       if(!audioCtx){
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1449,7 +1415,7 @@
       }catch(e){}
     }
 
-    // ========= かみふぶき =========
+    // かみふぶき
     let confettiAnim = null;
     let confettiStopAt = 0;
     let confettiParts = [];
@@ -1504,9 +1470,7 @@
           p.y += p.vy;
           p.rot += p.vr;
           p.vy += 0.02;
-          if(now > confettiStopAt - 700){
-            p.alpha *= 0.985;
-          }
+          if(now > confettiStopAt - 700) p.alpha *= 0.985;
           if(p.y > H + 40){
             p.y = -20;
             p.x = Math.random()*W;
@@ -1542,6 +1506,7 @@
       confettiAnim = requestAnimationFrame(step);
     }
 
+    // ★ ここで「0→紙吹雪→ファンファーレ」を確実に実施
     function finish(){
       stopAllTimers();
       mode = "finished";
@@ -1549,10 +1514,8 @@
       timerEl.textContent = "00:00";
       setStatus("よくできました");
 
-      // done
       done[idx] = true;
 
-      // ★ タマゴをキャラに（孵化）→ 終わったらエンディング判定
       hatchEggAt(idx).then(() => {
         updateProgress();
         maybeScheduleEnding();
@@ -1560,7 +1523,7 @@
 
       updateProgress();
 
-      // しゅうりょう えんしゅつ
+      // ✅ ファンファーレ → かみふぶき（0になった瞬間の演出）
       playFanfare();
       launchConfetti(2400);
 
@@ -1575,8 +1538,6 @@
       updateButtons();
 
       lastCountdownSpoken = null;
-
-      // ★ 応援スケジューラ開始
       armCheer();
 
       const endAt = Date.now() + remainingMs;
@@ -1618,20 +1579,18 @@
         cueTimers.push(setTimeout(() => {
           showOverlay(s.t, "");
           try{ ensureAudio(); }catch(e){}
-          // ★ 文字表示 + 音声
           speak(s.t);
         }, total));
         total += s.ms;
       });
 
-      cueTimers.push(setTimeout(() => {
-        startCountdown();
-      }, total));
+      cueTimers.push(setTimeout(() => startCountdown(), total));
     }
 
     function onStart(){
       if(mode === "running" || mode === "cue" || mode === "ending") return;
 
+      // ★ iOS対策：ユーザー操作でAudioContextを起こす
       try{ ensureAudio(); }catch(e){}
 
       if(mode === "paused"){
@@ -1695,9 +1654,7 @@
     buildSettings();
     loadMenu(0);
 
-    // ★ 先にmanifestを読み込み開始（孵化をスムーズに）
     loadCharacterList().then(() => {
-      // 既に全部終わってる状態でリロードした場合も考慮（念のため）
       maybeScheduleEnding();
     });
 
