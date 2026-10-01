@@ -10,183 +10,228 @@
     :root{
       --bg0:#070a14;
       --bg1:#0b1220;
-      --card: rgba(255,255,255,.06);
-      --line: rgba(255,255,255,.14);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.78);
-      --shadow: 0 14px 40px rgba(0,0,0,.35);
-      --r: 16px;
-    }
-    *{ box-sizing: border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(900px 500px at 18% 10%, rgba(124,58,237,.22), transparent 60%),
-        radial-gradient(900px 500px at 88% 20%, rgba(6,182,212,.18), transparent 60%),
-        radial-gradient(700px 450px at 60% 85%, rgba(34,197,94,.14), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow-x:hidden;
-    }
-    .wrap{
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 28px 16px 60px;
+      --card:rgba(255,255,255,.06);
+      --line:rgba(255,255,255,.14);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.78);
+      --shadow:0 14px 40px rgba(0,0,0,.35);
+      --r:16px;
     }
 
-    /* Grid: 3 columns x 2 rows (responsive) */
+    *{ box-sizing:border-box; }
+    html,body{ min-height:100%; }
+
+    body{
+      margin:0;
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
+        "Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 18% 10%,rgba(124,58,237,.22),transparent 60%),
+        radial-gradient(900px 500px at 88% 20%,rgba(6,182,212,.18),transparent 60%),
+        radial-gradient(700px 450px at 60% 85%,rgba(34,197,94,.14),transparent 60%),
+        linear-gradient(180deg,var(--bg0),var(--bg1));
+      background-attachment:fixed;
+      overflow-x:hidden;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:1100px;
+      margin:0 auto;
+      padding:28px 16px 60px;
+    }
+
+    /* PCでは3列。12タイルは4行で表示 */
     .grid{
       display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      width:100%;
     }
-    @media (max-width: 900px){
-      .grid{ grid-template-columns: repeat(2, 1fr); }
+
+    @media (max-width:900px){
+      .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
-    @media (max-width: 560px){
-      .grid{ grid-template-columns: 1fr; }
+
+    @media (max-width:560px){
+      .grid{ grid-template-columns:1fr; }
     }
 
     a.card{
       display:block;
+      min-width:0;
       text-decoration:none;
-      color: inherit;
-      border-radius: calc(var(--r) + 6px);
-      border: 1px solid var(--line);
-      background: var(--card);
-      box-shadow: var(--shadow);
+      color:inherit;
+      border-radius:calc(var(--r) + 6px);
+      border:1px solid var(--line);
+      background:var(--card);
+      box-shadow:var(--shadow);
       overflow:hidden;
-      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      transition:transform .18s ease,background .18s ease,border-color .18s ease;
     }
+
     a.card:hover{
-      transform: translateY(-3px);
-      background: rgba(255,255,255,.085);
-      border-color: rgba(255,255,255,.22);
+      transform:translateY(-3px);
+      background:rgba(255,255,255,.085);
+      border-color:rgba(255,255,255,.22);
     }
+
     a.card:focus-visible{
-      outline: 3px solid rgba(34,197,94,.55);
-      outline-offset: 3px;
+      outline:3px solid rgba(34,197,94,.55);
+      outline-offset:3px;
     }
 
     .thumb{
       width:100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio:16 / 9;
+      overflow:hidden;
+      position:relative;
       background:
-        radial-gradient(120px 80px at 20% 30%, rgba(255,255,255,.12), transparent 60%),
-        linear-gradient(135deg, rgba(124,58,237,.20), rgba(6,182,212,.10));
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      position: relative;
+        radial-gradient(120px 80px at 20% 30%,rgba(255,255,255,.12),transparent 60%),
+        linear-gradient(135deg,rgba(124,58,237,.20),rgba(6,182,212,.10));
+      border-bottom:1px solid rgba(255,255,255,.10);
     }
+
     .thumb img{
+      display:block;
       width:100%;
       height:100%;
-      object-fit: cover;
-      display:block;
+      max-width:100%;
+      object-fit:cover;
     }
 
     .name{
-      padding: 12px 14px 14px;
-      font-size: 14px;
-      letter-spacing: .2px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      padding:12px 14px 14px;
+      font-size:14px;
+      letter-spacing:.2px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
-    /* Reduced motion */
-    @media (prefers-reduced-motion: reduce){
-      a.card{ transition: none; }
+    .placeholder{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:rgba(255,255,255,.75);
+      font-size:13px;
+      letter-spacing:.2px;
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      a.card{ transition:none; }
       a.card:hover{ transform:none; }
     }
   </style>
 </head>
-
 <body>
   <main class="wrap">
-<section class="grid" aria-label="ミニゲーム一覧">
+    <section class="grid" aria-label="ミニゲーム一覧">
 
-  <a class="card" href="Interview/" aria-label="インタビュー">
-    <div class="thumb">
-      <img src="game1.jpg" alt="ゲーム1class="name">インタビュー</div>
-  </a>
+      <a class="card" href="Interview/" aria-label="インタビュー">
+        <div class="thumb">
+          <img src="game1.jpg" alt="ゲーム1のイメージ画像" />
+        </div>
+        <div class="name">インタビュー</div>
+      </a>
 
-  <a class="card" href="count/index.html" aria-label="ゲーム2へ">
-    <div class="thumb">
-      <img src="game2.jpg" alt="ゲーム2のイメージ="name">かぞえる</div>
-  </a>
+      <a class="card" href="count/index.html" aria-label="かぞえる">
+        <div class="thumb">
+          <img src="game2.jpg" alt="ゲーム2のイメージ画像" />
+        </div>
+        <div class="name">かぞえる</div>
+      </a>
 
-  <a class="card" href="seesaw/index.html" aria-label="ゲーム3へ">
-    <div class="thumb">
-      <ame3.jpg
-    </div>
-    <div class="name">おもさくらべ</div>
-  </a>
+      <a class="card" href="seesaw/index.html" aria-label="おもさくらべ">
+        <div class="thumb">
+          <img src="game3.jpg" alt="ゲーム3のイメージ画像" />
+        </div>
+        <div class="name">おもさくらべ</div>
+      </a>
 
-  <a class="card" href="connect/index.html" aria-label="ゲーム4へ">
-    <div class="thumb">
-      <img src="game4.jpg" alt="ゲーム4class="name">てんつなぎ</div>
-  </a>
+      <a class="card" href="connect/index.html" aria-label="てんつなぎ">
+        <div class="thumb">
+          <img src="game4.jpg" alt="ゲーム4のイメージ画像" />
+        </div>
+        <div class="name">てんつなぎ</div>
+      </a>
 
-  <a class="card" href="karada/index.html" aria-label="ゲーム5へ">
-    <div class="thumb">
-      <img src="game5.jpg" alt="ゲーム5class="name">からだトレーニング</div>
-  </a>
+      <a class="card" href="karada/index.html" aria-label="からだトレーニング">
+        <div class="thumb">
+          <img src="game5.jpg" alt="ゲーム5のイメージ画像" />
+        </div>
+        <div class="name">からだトレーニング</div>
+      </a>
 
-  <a class="card" href="eizokioku/index.html" aria-label="ゲーム6へ">
-    <div class="thumb">
-      <img src="game6.jpg" alt="ゲーム6のイメージ画像">
-e">えいぞう きおく</div>
-  </a>
+      <a class="card" href="eizokioku/index.html" aria-label="えいぞう きおく">
+        <div class="thumb">
+          <img src="game6.jpg" alt="ゲーム6のイメージ画像" />
+        </div>
+        <div class="name">えいぞう きおく</div>
+      </a>
 
-  <a class="card" href="game7/ass="thumb">
-      <img src="game7.div>
-    <div class="name">ひらがな</div>
-  </a>
+      <a class="card" href="game7/index.html" aria-label="ひらがな">
+        <div class="thumb">
+          <img src="game7.jpg" alt="ゲーム7のイメージ画像" />
+        </div>
+        <div class="name">ひらがな</div>
+      </a>
 
-  game8/index.html
-    <div class="thumb">
-      <img src="game8.jpg" alt="ゲーム8のイメージ="name">カタカナ</div>
-  </a>
+      <a class="card" href="game8/index.html" aria-label="カタカナ">
+        <div class="thumb">
+          <img src="game8.jpg" alt="ゲーム8のイメージ画像" />
+        </div>
+        <div class="name">カタカナ</div>
+      </a>
 
-  <a class="card" href="game9/index.html" aria-labelg src="game9.jpg" alt="ゲーム9のイメージ画像name">とけい</div>
-  </a>
+      <a class="card" href="game9/index.html" aria-label="とけい">
+        <div class="thumb">
+          <img src="game9.jpg" alt="ゲーム9のイメージ画像" />
+        </div>
+        <div class="name">とけい</div>
+      </a>
 
-  <a class="card" href  <div class="thumb">
-      game10.jpg
-    </div>
-    <div class="name">たしざん</div>
-  </a>
+      <a class="card" href="game10/index.html" aria-label="たしざん">
+        <div class="thumb">
+          <img src="game10.jpg" alt="ゲーム10のイメージ画像" />
+        </div>
+        <div class="name">たしざん</div>
+      </a>
 
-  <a class="card" href="game11/index.html" aria-label="ゲーム11game11.jpg" alt="div class="name">かたちあそび</div>
-  </a>
+      <a class="card" href="game11/index.html" aria-label="かたちあそび">
+        <div class="thumb">
+          <img src="game11.jpg" alt="ゲーム11のイメージ画像" />
+        </div>
+        <div class="name">かたちあそび</div>
+      </a>
 
-  <a class="card" href="game12/index.html" aria-label="ゲーc="game12.jpg" alt <div class="name">なかまはずれ</div>
-  </a>
+      <a class="card" href="game12/index.html" aria-label="なかまはずれ">
+        <div class="thumb">
+          <img src="game12.jpg" alt="ゲーム12のイメージ画像" />
+        </div>
+        <div class="name">なかまはずれ</div>
+      </a>
 
-</section>
+    </section>
   </main>
 
   <script>
-    // 画像がまだ無いときでも崩れないよう、読み込み失敗時はプレースホルダーにします
-    document.querySelectorAll('.thumb img').forEach(img => {
+    // 画像がまだない場合は、カードサイズを維持したプレースホルダーを表示
+    document.querySelectorAll('.thumb img').forEach((img) => {
       img.addEventListener('error', () => {
         const thumb = img.closest('.thumb');
         img.remove();
-        const ph = document.createElement('div');
-        ph.textContent = 'image';
-        ph.style.cssText = `
-          width:100%; height:100%;
-          display:flex; align-items:center; justify-content:center;
-          color: rgba(255,255,255,.75);
-          font-size: 13px;
-          letter-spacing:.2px;
-        `;
-        thumb.appendChild(ph);
+        const placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+        placeholder.textContent = 'image';
+        thumb.appendChild(placeholder);
       }, { once:true });
     });
   </script>
 </body>
 </html>
+
