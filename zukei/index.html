@@ -4,734 +4,86 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ずけい きおく ゲーム</title>
-  <meta name="description" content="3×3のマスに置かれた図形を覚えて再現する、子ども向け記憶ゲーム" />
+  <meta name="description" content="3×3または4×4のマスに置かれた図形を覚えて再現する子ども向け記憶ゲーム" />
   <meta name="theme-color" content="#fffaf0" />
   <style>
-    :root{
-      --ink:#20242a;
-      --blue:#6ec5f3;
-      --blue-dark:#2097d3;
-      --red:#f22;
-      --panel:#fff;
-      --soft:#fffaf0;
-      --line:#252525;
-      --shadow:0 10px 28px rgba(60,45,25,.14);
-    }
-
-    *{ box-sizing:border-box; }
-    html,body{ min-height:100%; }
-    body{
-      margin:0;
-      color:var(--ink);
-      background:
-        radial-gradient(circle at 12% 12%, rgba(255,221,133,.28), transparent 24%),
-        radial-gradient(circle at 88% 85%, rgba(110,197,243,.20), transparent 27%),
-        var(--soft);
-      font-family:"Hiragino Maru Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
-      user-select:none;
-      -webkit-user-select:none;
-      overflow-x:hidden;
-    }
-
-    button{ font:inherit; }
-
-    .app{
-      width:min(1220px, 100%);
-      min-height:100vh;
-      margin:0 auto;
-      padding:18px clamp(14px,3vw,36px) 28px;
-      display:grid;
-      grid-template-columns:minmax(420px,1.18fr) minmax(330px,.82fr);
-      gap:clamp(24px,4vw,56px);
-      align-items:center;
-    }
-
-    .board-wrap{ display:flex; justify-content:center; align-items:center; }
-    .board{
-      width:min(72vh, 620px, 100%);
-      aspect-ratio:1;
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      grid-template-rows:repeat(3,1fr);
-      background:rgba(255,255,255,.82);
-      border:3px solid var(--line);
-      box-shadow:var(--shadow);
-    }
-
-    .cell{
-      position:relative;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-width:0;
-      border-right:2px solid var(--line);
-      border-bottom:2px solid var(--line);
-      background:rgba(255,255,255,.78);
-      touch-action:none;
-    }
-    .cell:nth-child(3n){ border-right:0; }
-    .cell:nth-child(n+7){ border-bottom:0; }
-    .cell.answer-mode{ cursor:pointer; }
-    .cell.answer-mode:hover,
-    .cell.answer-mode:focus-visible{ background:#eef9ff; outline:none; }
-
-    .shape{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      width:72%;
-      height:72%;
-      font-family:Arial,"Noto Sans Symbols 2",sans-serif;
-      font-size:clamp(54px,8vw,106px);
-      line-height:1;
-      font-weight:500;
-      color:#111;
-      pointer-events:none;
-    }
-    .cell .shape{ position:absolute; inset:14%; width:72%; height:72%; }
-    .shape[data-shape="circle"]{ font-weight:400; }
-    .shape[data-shape="triangle"]{ transform:translateY(-3%); }
-    .shape[data-shape="arrow-up"],
-    .shape[data-shape="arrow-right"],
-    .shape[data-shape="arrow-down"],
-    .shape[data-shape="arrow-left"]{ font-size:clamp(62px,9vw,118px); font-weight:700; }
-
-    .correct-overlay{
-      z-index:3;
-      color:var(--red)!important;
-      text-shadow:0 0 2px #fff,0 0 5px #fff;
-      animation:markIn .28s ease-out both;
-    }
-    .wrong-empty{
-      z-index:3;
-      color:var(--red)!important;
-      font-size:clamp(52px,8vw,100px)!important;
-      font-weight:700!important;
-    }
-    .cell.wrong-cell{ background:#fff0f0; }
-    .cell.correct-cell{ background:#eefff1; }
-
-    .side{
-      min-height:600px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      position:relative;
-    }
-
-    .level{
-      margin:0 0 10px;
-      font-size:clamp(30px,4vw,46px);
-      font-weight:900;
-      letter-spacing:.04em;
-    }
-    .message{
-      min-height:1.35em;
-      margin:6px 0 16px;
-      font-size:clamp(28px,4.4vw,58px);
-      font-weight:900;
-      line-height:1.2;
-    }
-    .message.small{ font-size:clamp(22px,3vw,36px); }
-
-    .timer{
-      display:flex;
-      justify-content:center;
-      align-items:baseline;
-      gap:7px;
-      min-height:128px;
-      margin:0 0 8px;
-    }
-    .timer .remaining,.timer .seconds{ font-size:clamp(20px,2.5vw,32px); }
-    .timer .time{
-      min-width:1.8em;
-      font-family:Arial,sans-serif;
-      font-size:clamp(86px,11vw,132px);
-      line-height:1;
-      font-weight:900;
-      font-variant-numeric:tabular-nums;
-    }
-    .timer.danger .time{ color:#e3342f; animation:pulse .7s infinite alternate; }
-
-    .palette{
-      width:min(410px,100%);
-      margin:0 auto 12px;
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:10px;
-    }
-    .shape-btn{
-      aspect-ratio:1;
-      border:2px solid #222;
-      border-radius:14px;
-      background:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:grab;
-      touch-action:none;
-      box-shadow:0 4px 0 rgba(0,0,0,.12);
-      transition:transform .12s ease,background .12s ease,border-color .12s ease;
-    }
-    .shape-btn:hover{ transform:translateY(-2px); background:#f7fcff; }
-    .shape-btn.selected{ background:#dff4ff; border-color:var(--blue-dark); outline:4px solid rgba(32,151,211,.22); }
-    .shape-btn .shape{ font-size:clamp(40px,5vw,62px); width:86%; height:86%; }
-    .shape-btn:active{ cursor:grabbing; transform:translateY(1px); }
-
-    .actions{ display:flex; gap:18px; justify-content:center; width:100%; margin:8px 0 12px; }
-    .action{
-      min-width:168px;
-      padding:11px 24px;
-      border:2px solid #222;
-      border-radius:12px;
-      background:#fff;
-      color:#111;
-      font-size:clamp(22px,2.5vw,31px);
-      font-weight:900;
-      cursor:pointer;
-      box-shadow:0 4px 0 rgba(0,0,0,.15);
-    }
-    .action.primary{ background:linear-gradient(#9bd7f7,#62bced); border-color:#168fc9; }
-    .action:hover{ filter:brightness(.98); transform:translateY(-1px); }
-    .action:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.15); }
-
-    .character{
-      position:relative;
-      width:min(490px,92%);
-      height:260px;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      margin-top:2px;
-    }
-    .character img{
-      display:block;
-      max-width:100%;
-      max-height:100%;
-      object-fit:contain;
-      filter:drop-shadow(0 8px 10px rgba(0,0,0,.12));
-    }
-    .image-help{
-      position:absolute;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      border:2px dashed #aaa;
-      border-radius:20px;
-      background:rgba(255,255,255,.7);
-      color:#666;
-      font-weight:700;
-    }
-
-    .hidden{ display:none!important; }
-    .drag-ghost{
-      position:fixed;
-      z-index:9999;
-      width:82px;
-      height:82px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:2px solid var(--blue-dark);
-      border-radius:14px;
-      background:rgba(255,255,255,.92);
-      box-shadow:0 10px 25px rgba(0,0,0,.2);
-      pointer-events:none;
-      transform:translate(-50%,-50%);
-    }
-    .drag-ghost .shape{ font-size:57px; }
-
-    .confetti{
-      position:fixed;
-      z-index:9998;
-      top:-24px;
-      width:12px;
-      height:20px;
-      border-radius:3px;
-      pointer-events:none;
-      animation:confettiFall var(--duration) cubic-bezier(.16,.66,.34,1) forwards;
-    }
-
-    .evolve{ animation:evolve .9s ease both; }
-
-    @keyframes pulse{ from{ transform:scale(1); } to{ transform:scale(1.06); } }
-    @keyframes markIn{ from{ transform:scale(.35) rotate(-10deg); opacity:0; } to{ transform:scale(1); opacity:1; } }
-    @keyframes evolve{
-      0%{ transform:scale(.7); filter:brightness(2) drop-shadow(0 0 0 gold); opacity:.2; }
-      45%{ transform:scale(1.09); filter:brightness(1.35) drop-shadow(0 0 28px gold); opacity:1; }
-      100%{ transform:scale(1); filter:drop-shadow(0 8px 10px rgba(0,0,0,.12)); }
-    }
-    @keyframes confettiFall{
-      0%{ transform:translate3d(0,-5vh,0) rotate(0deg); opacity:1; }
-      100%{ transform:translate3d(var(--drift),108vh,0) rotate(var(--spin)); opacity:.9; }
-    }
-
-    @media (max-width:820px){
-      .app{ grid-template-columns:1fr; gap:18px; align-items:start; }
-      .board{ width:min(92vw,560px); }
-      .side{ min-height:0; }
-      .character{ height:220px; }
-    }
-
-    @media (max-width:480px){
-      .app{ padding:10px 10px 24px; }
-      .palette{ gap:7px; }
-      .shape-btn{ border-radius:10px; }
-      .actions{ gap:10px; }
-      .action{ min-width:0; flex:1; padding:10px 8px; }
-      .character{ height:180px; }
-    }
+    :root{--ink:#20242a;--blue:#6ec5f3;--blue-dark:#2097d3;--red:#f22;--soft:#fffaf0;--line:#252525;--shadow:0 10px 28px rgba(60,45,25,.14)}
+    *{box-sizing:border-box} html,body{min-height:100%}
+    body{margin:0;color:var(--ink);background:radial-gradient(circle at 12% 12%,rgba(255,221,133,.28),transparent 24%),radial-gradient(circle at 88% 85%,rgba(110,197,243,.20),transparent 27%),var(--soft);font-family:"Hiragino Maru Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;user-select:none;-webkit-user-select:none;overflow-x:hidden}
+    button{font:inherit}
+    .app{width:min(1220px,100%);min-height:100vh;margin:0 auto;padding:18px clamp(14px,3vw,36px) 28px;display:grid;grid-template-columns:minmax(420px,1.18fr) minmax(330px,.82fr);gap:clamp(24px,4vw,56px);align-items:center}
+    .board-wrap{display:flex;justify-content:center;align-items:center}
+    .board{width:min(72vh,620px,100%);aspect-ratio:1;display:grid;background:rgba(255,255,255,.82);border:3px solid var(--line);box-shadow:var(--shadow)}
+    .cell{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;background:rgba(255,255,255,.78);border-right:2px solid var(--line);border-bottom:2px solid var(--line);touch-action:none}
+    .board.grid-3{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+    .board.grid-3 .cell:nth-child(3n){border-right:0}.board.grid-3 .cell:nth-child(n+7){border-bottom:0}
+    .board.grid-4{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr)}
+    .board.grid-4 .cell:nth-child(4n){border-right:0}.board.grid-4 .cell:nth-child(n+13){border-bottom:0}
+    .cell.answer-mode{cursor:pointer}.cell.answer-mode:hover,.cell.answer-mode:focus-visible{background:#eef9ff;outline:none}
+    .shape{display:flex;align-items:center;justify-content:center;width:72%;height:72%;font-family:Arial,"Noto Sans Symbols 2",sans-serif;font-size:clamp(46px,7vw,96px);line-height:1;font-weight:500;color:#111;pointer-events:none}
+    .grid-4 .shape{font-size:clamp(36px,5.4vw,72px)}
+    .cell .shape{position:absolute;inset:14%;width:72%;height:72%}
+    .shape[data-shape^="arrow-"]{font-weight:700}.grid-3 .shape[data-shape^="arrow-"]{font-size:clamp(54px,8vw,108px)}.grid-4 .shape[data-shape^="arrow-"]{font-size:clamp(42px,6vw,82px)}
+    .correct-overlay{z-index:3;color:var(--red)!important;text-shadow:0 0 2px #fff,0 0 5px #fff;animation:markIn .28s ease-out both}.wrong-empty{z-index:3;color:var(--red)!important;font-weight:700!important}.cell.wrong-cell{background:#fff0f0}.cell.correct-cell{background:#eefff1}
+    .side{min-height:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}
+    .level{margin:0 0 10px;font-size:clamp(30px,4vw,46px);font-weight:900;letter-spacing:.04em}.message{min-height:1.35em;margin:6px 0 16px;font-size:clamp(28px,4.4vw,58px);font-weight:900;line-height:1.2}.message.small{font-size:clamp(22px,3vw,36px)}
+    .timer{display:flex;justify-content:center;align-items:baseline;gap:7px;min-height:118px;margin:0 0 2px}.timer .remaining,.timer .seconds{font-size:clamp(20px,2.5vw,32px)}.timer .time{min-width:1.8em;font-family:Arial,sans-serif;font-size:clamp(82px,10vw,126px);line-height:1;font-weight:900;font-variant-numeric:tabular-nums}.timer.danger .time{color:#e3342f;animation:pulse .7s infinite alternate}
+    .memory-action{margin:0 0 14px}.palette{width:min(410px,100%);margin:0 auto 12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .shape-btn{aspect-ratio:1;border:2px solid #222;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;box-shadow:0 4px 0 rgba(0,0,0,.12);transition:.12s}.shape-btn:hover{transform:translateY(-2px);background:#f7fcff}.shape-btn.selected{background:#dff4ff;border-color:var(--blue-dark);outline:4px solid rgba(32,151,211,.22)}.shape-btn .shape{font-size:clamp(40px,5vw,62px);width:86%;height:86%}
+    .actions{display:flex;gap:18px;justify-content:center;width:100%;margin:8px 0 12px}.action{min-width:168px;padding:11px 24px;border:2px solid #222;border-radius:12px;background:#fff;color:#111;font-size:clamp(22px,2.5vw,31px);font-weight:900;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.15)}.action.primary{background:linear-gradient(#9bd7f7,#62bced);border-color:#168fc9}.action:hover{filter:brightness(.98);transform:translateY(-1px)}.action:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.15)}
+    .character{position:relative;width:min(490px,92%);height:250px;display:flex;align-items:flex-end;justify-content:center;margin-top:2px}.character img{display:block;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.12))}.image-help{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;border:2px dashed #aaa;border-radius:20px;background:rgba(255,255,255,.7);color:#666;font-weight:700}
+    .hidden{display:none!important}.drag-ghost{position:fixed;z-index:9999;width:82px;height:82px;display:flex;align-items:center;justify-content:center;border:2px solid var(--blue-dark);border-radius:14px;background:rgba(255,255,255,.92);box-shadow:0 10px 25px rgba(0,0,0,.2);pointer-events:none;transform:translate(-50%,-50%)}.drag-ghost .shape{font-size:57px}
+    .confetti{position:fixed;z-index:9998;top:-24px;width:12px;height:20px;border-radius:3px;pointer-events:none;animation:confettiFall var(--duration) cubic-bezier(.16,.66,.34,1) forwards}.evolve{animation:evolve .9s ease both}
+    @keyframes pulse{to{transform:scale(1.06)}}@keyframes markIn{from{transform:scale(.35) rotate(-10deg);opacity:0}to{transform:scale(1);opacity:1}}@keyframes evolve{0%{transform:scale(.7);filter:brightness(2) drop-shadow(0 0 0 gold);opacity:.2}45%{transform:scale(1.09);filter:brightness(1.35) drop-shadow(0 0 28px gold);opacity:1}100%{transform:scale(1);filter:drop-shadow(0 8px 10px rgba(0,0,0,.12))}}@keyframes confettiFall{to{transform:translate3d(var(--drift),108vh,0) rotate(var(--spin));opacity:.9}}
+    @media(max-width:820px){.app{grid-template-columns:1fr;gap:18px;align-items:start}.board{width:min(92vw,560px)}.side{min-height:0}.character{height:220px}}@media(max-width:480px){.app{padding:10px 10px 24px}.palette{gap:7px}.shape-btn{border-radius:10px}.actions{gap:10px}.action{min-width:0;flex:1;padding:10px 8px}.character{height:180px}}
   </style>
 </head>
 <body>
   <main class="app">
-    <section class="board-wrap" aria-label="3かける3の記憶マス">
-      <div id="board" class="board"></div>
-    </section>
-
+    <section class="board-wrap"><div id="board" class="board grid-3" aria-label="記憶マス"></div></section>
     <section class="side" aria-live="polite">
       <h1 id="levelText" class="level">レベル1</h1>
-      <div id="message" class="message small">ずけいの ばしょを おぼえよう</div>
-
-      <div id="timer" class="timer">
-        <span class="remaining">のこり</span>
-        <strong id="timeValue" class="time">20</strong>
-        <span class="seconds">びょう</span>
-      </div>
-
-      <div id="answerControls" class="hidden">
-        <div id="palette" class="palette" aria-label="図形を選ぶ"></div>
-        <div class="actions">
-          <button id="resetButton" class="action" type="button">やりなおし</button>
-          <button id="doneButton" class="action primary" type="button">できた</button>
-        </div>
-      </div>
-
-      <div id="resultControls" class="actions hidden">
-        <button id="endButton" class="action" type="button">おわり</button>
-        <button id="nextButton" class="action primary" type="button">つぎへ</button>
-        <button id="retryButton" class="action primary hidden" type="button">もういちど</button>
-      </div>
-
-      <div class="character">
-        <img id="levelImage" src="lv1.png" alt="レベル1の成長イラスト" />
-        <div id="imageHelp" class="image-help">同じフォルダーに lv1.png ～ lv5.png を置いてください</div>
-      </div>
+      <div id="message" class="message small">ずけいを おぼえよう</div>
+      <div id="timer" class="timer"><span class="remaining">のこり</span><strong id="timeValue" class="time">20</strong><span class="seconds">びょう</span></div>
+      <div id="memoryAction" class="memory-action"><button id="okButton" class="action primary" type="button">OK</button></div>
+      <div id="answerControls" class="hidden"><div id="palette" class="palette" aria-label="図形を選ぶ"></div><div class="actions"><button id="resetButton" class="action" type="button">やりなおし</button><button id="doneButton" class="action primary" type="button">できた</button></div></div>
+      <div id="resultControls" class="actions hidden"><button id="endButton" class="action" type="button">おわり</button><button id="nextButton" class="action primary" type="button">つぎへ</button><button id="retryButton" class="action primary hidden" type="button">もういちど</button></div>
+      <div class="character"><img id="levelImage" src="lv1.png" alt="成長イラスト" /><div id="imageHelp" class="image-help">同じフォルダーに lv1.png ～ lv5.png を置いてください</div></div>
     </section>
   </main>
-
-  <script>
-    'use strict';
-
-    const MEMORY_SECONDS = 20;
-    const MAX_LEVEL = 5;
-
-    const SHAPES = [
-      { id:'circle', symbol:'○', label:'まる' },
-      { id:'triangle', symbol:'△', label:'さんかく' },
-      { id:'square', symbol:'□', label:'しかく' },
-      { id:'cross', symbol:'×', label:'ばつ' },
-      { id:'arrow-up', symbol:'↑', label:'うえ' },
-      { id:'arrow-right', symbol:'→', label:'みぎ' },
-      { id:'arrow-down', symbol:'↓', label:'した' },
-      { id:'arrow-left', symbol:'←', label:'ひだり' }
-    ];
-
-    // レベルが上がるほど、覚える図形の数が増えます。
-    const LEVEL_SHAPE_COUNTS = [4, 5, 6, 7, 8];
-
-    const board = document.getElementById('board');
-    const palette = document.getElementById('palette');
-    const levelText = document.getElementById('levelText');
-    const message = document.getElementById('message');
-    const timer = document.getElementById('timer');
-    const timeValue = document.getElementById('timeValue');
-    const answerControls = document.getElementById('answerControls');
-    const resultControls = document.getElementById('resultControls');
-    const resetButton = document.getElementById('resetButton');
-    const doneButton = document.getElementById('doneButton');
-    const endButton = document.getElementById('endButton');
-    const nextButton = document.getElementById('nextButton');
-    const retryButton = document.getElementById('retryButton');
-    const levelImage = document.getElementById('levelImage');
-    const imageHelp = document.getElementById('imageHelp');
-
-    let level = 1;
-    let phase = 'memory';
-    let answer = Array(9).fill(null);
-    let input = Array(9).fill(null);
-    let selectedShape = null;
-    let timerId = null;
-    let remaining = MEMORY_SECONDS;
-    let ghost = null;
-    let draggingShape = null;
-
-    function shapeById(id){ return SHAPES.find((shape) => shape.id === id); }
-
-    function makeShape(id, extraClass = ''){
-      const data = shapeById(id);
-      const el = document.createElement('span');
-      el.className = `shape ${extraClass}`.trim();
-      el.dataset.shape = id;
-      el.textContent = data.symbol;
-      el.setAttribute('aria-label', data.label);
-      return el;
-    }
-
-    function shuffle(items){
-      const copy = [...items];
-      for(let i = copy.length - 1; i > 0; i--){
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function createProblem(){
-      answer = Array(9).fill(null);
-      const cellIndexes = shuffle([0,1,2,3,4,5,6,7,8]);
-      const count = LEVEL_SHAPE_COUNTS[level - 1];
-
-      // 同じ問題の中では、8種類を重複させずに配置します。
-      const chosenShapes = shuffle(SHAPES).slice(0, count);
-      chosenShapes.forEach((shape, i) => {
-        answer[cellIndexes[i]] = shape.id;
-      });
-      input = Array(9).fill(null);
-    }
-
-    function buildBoard(){
-      board.innerHTML = '';
-      for(let i = 0; i < 9; i++){
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.index = i;
-        cell.tabIndex = 0;
-        cell.setAttribute('aria-label', `${i + 1}ばんのマス`);
-        cell.addEventListener('click', () => handleCellClick(i));
-        cell.addEventListener('keydown', (event) => {
-          if(event.key === 'Enter' || event.key === ' '){
-            event.preventDefault();
-            handleCellClick(i);
-          }
-        });
-        cell.addEventListener('dragover', (event) => event.preventDefault());
-        cell.addEventListener('drop', (event) => {
-          event.preventDefault();
-          const id = event.dataTransfer.getData('text/plain');
-          placeShape(i, id);
-        });
-        board.appendChild(cell);
-      }
-    }
-
-    function buildPalette(){
-      palette.innerHTML = '';
-      SHAPES.forEach((shape) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'shape-btn';
-        button.dataset.shape = shape.id;
-        button.setAttribute('aria-label', `${shape.label}を選ぶ`);
-        button.draggable = true;
-        button.appendChild(makeShape(shape.id));
-
-        button.addEventListener('click', () => selectShape(shape.id));
-        button.addEventListener('dragstart', (event) => {
-          event.dataTransfer.setData('text/plain', shape.id);
-          event.dataTransfer.effectAllowed = 'copy';
-        });
-        button.addEventListener('pointerdown', (event) => beginTouchDrag(event, shape.id));
-        palette.appendChild(button);
-      });
-    }
-
-    function renderMemoryBoard(){
-      [...board.children].forEach((cell, index) => {
-        cell.className = 'cell';
-        cell.innerHTML = '';
-        if(answer[index]) cell.appendChild(makeShape(answer[index]));
-      });
-    }
-
-    function renderInputBoard(){
-      [...board.children].forEach((cell, index) => {
-        cell.className = 'cell answer-mode';
-        cell.innerHTML = '';
-        if(input[index]) cell.appendChild(makeShape(input[index]));
-      });
-    }
-
-    function updateLevelImage(displayLevel = level, animate = false){
-      const imageLevel = Math.max(1, Math.min(MAX_LEVEL, displayLevel));
-      imageHelp.style.display = 'none';
-      levelImage.style.display = 'block';
-      levelImage.src = `lv${imageLevel}.png`;
-      levelImage.alt = `レベル${imageLevel}の成長イラスト`;
-      levelImage.classList.remove('evolve');
-      if(animate){
-        void levelImage.offsetWidth;
-        levelImage.classList.add('evolve');
-      }
-    }
-
-    levelImage.addEventListener('error', () => {
-      levelImage.style.display = 'none';
-      imageHelp.style.display = 'flex';
-    });
-
-    function startLevel(sameProblem = false){
-      clearInterval(timerId);
-      phase = 'memory';
-      selectedShape = null;
-      remaining = MEMORY_SECONDS;
-      levelText.textContent = `レベル${level}`;
-      message.textContent = 'ずけいの ばしょを おぼえよう';
-      message.className = 'message small';
-      timer.classList.remove('hidden','danger');
-      timeValue.textContent = remaining;
-      answerControls.classList.add('hidden');
-      resultControls.classList.add('hidden');
-      retryButton.classList.add('hidden');
-      nextButton.classList.remove('hidden');
-      nextButton.textContent = level === MAX_LEVEL ? 'もういちど' : 'つぎへ';
-      if(!sameProblem) createProblem();
-      else input = Array(9).fill(null);
-      renderMemoryBoard();
-      updateLevelImage(level, false);
-
-      timerId = setInterval(() => {
-        remaining -= 1;
-        timeValue.textContent = remaining;
-        if(remaining <= 5) timer.classList.add('danger');
-        if(remaining <= 0){
-          clearInterval(timerId);
-          beginAnswer();
-        }
-      }, 1000);
-    }
-
-    function beginAnswer(){
-      phase = 'answer';
-      selectedShape = null;
-      timer.classList.add('hidden');
-      message.textContent = 'おぼえた ばしょに おこう';
-      message.className = 'message small';
-      answerControls.classList.remove('hidden');
-      resultControls.classList.add('hidden');
-      updatePaletteSelection();
-      renderInputBoard();
-    }
-
-    function selectShape(id){
-      if(phase !== 'answer') return;
-      selectedShape = selectedShape === id ? null : id;
-      updatePaletteSelection();
-    }
-
-    function updatePaletteSelection(){
-      document.querySelectorAll('.shape-btn').forEach((button) => {
-        button.classList.toggle('selected', button.dataset.shape === selectedShape);
-      });
-    }
-
-    function handleCellClick(index){
-      if(phase !== 'answer') return;
-      if(selectedShape){
-        placeShape(index, selectedShape);
-      }else if(input[index]){
-        input[index] = null;
-        renderInputBoard();
-      }
-    }
-
-    function placeShape(index, id){
-      if(phase !== 'answer' || !shapeById(id)) return;
-      input[index] = id;
-      renderInputBoard();
-    }
-
-    function resetInput(){
-      if(phase !== 'answer') return;
-      input = Array(9).fill(null);
-      selectedShape = null;
-      updatePaletteSelection();
-      renderInputBoard();
-      playTone(330, .07, 'sine', .05);
-    }
-
-    function grade(){
-      if(phase !== 'answer') return;
-      phase = 'result';
-      const isCorrect = answer.every((value, index) => value === input[index]);
-      answerControls.classList.add('hidden');
-      timer.classList.add('hidden');
-      resultControls.classList.remove('hidden');
-
-      if(isCorrect){
-        showCorrect();
-      }else{
-        showIncorrect();
-      }
-    }
-
-    function showCorrect(){
-      message.textContent = level === MAX_LEVEL ? 'ぜんぶ せいかい！' : 'せいかい！';
-      message.className = 'message';
-      retryButton.classList.add('hidden');
-      nextButton.classList.remove('hidden');
-      nextButton.textContent = level === MAX_LEVEL ? 'もういちど' : 'つぎへ';
-
-      [...board.children].forEach((cell) => cell.classList.add('correct-cell'));
-      const grownLevel = Math.min(level + 1, MAX_LEVEL);
-      updateLevelImage(grownLevel, true);
-      celebrate();
-      playSuccessSound();
-    }
-
-    function showIncorrect(){
-      message.textContent = 'ざんねん！';
-      message.className = 'message';
-      nextButton.classList.add('hidden');
-      retryButton.classList.remove('hidden');
-
-      [...board.children].forEach((cell, index) => {
-        cell.className = 'cell';
-        cell.innerHTML = '';
-        if(input[index]) cell.appendChild(makeShape(input[index]));
-
-        if(input[index] !== answer[index]){
-          cell.classList.add('wrong-cell');
-          if(answer[index]){
-            cell.appendChild(makeShape(answer[index], 'correct-overlay'));
-          }else{
-            const mark = document.createElement('span');
-            mark.className = 'shape correct-overlay wrong-empty';
-            mark.textContent = '×';
-            mark.setAttribute('aria-label','ここには図形を置きません');
-            cell.appendChild(mark);
-          }
-        }
-      });
-      playWrongSound();
-    }
-
-    function nextLevel(){
-      if(level < MAX_LEVEL){
-        level += 1;
-      }else{
-        level = 1;
-      }
-      startLevel(false);
-    }
-
-    function retryLevel(){ startLevel(true); }
-
-    function endGame(){
-      // このゲームをフォルダー内の index.html として置いた場合、トップページへ戻ります。
-      window.location.href = '../index.html';
-    }
-
-    function beginTouchDrag(event, id){
-      if(phase !== 'answer' || event.pointerType === 'mouse') return;
-      event.preventDefault();
-      draggingShape = id;
-      ghost = document.createElement('div');
-      ghost.className = 'drag-ghost';
-      ghost.appendChild(makeShape(id));
-      document.body.appendChild(ghost);
-      moveGhost(event.clientX, event.clientY);
-      event.currentTarget.setPointerCapture(event.pointerId);
-      event.currentTarget.addEventListener('pointermove', touchDragMove);
-      event.currentTarget.addEventListener('pointerup', touchDragEnd, { once:true });
-      event.currentTarget.addEventListener('pointercancel', touchDragEnd, { once:true });
-    }
-
-    function touchDragMove(event){
-      event.preventDefault();
-      moveGhost(event.clientX, event.clientY);
-    }
-
-    function moveGhost(x,y){
-      if(!ghost) return;
-      ghost.style.left = `${x}px`;
-      ghost.style.top = `${y}px`;
-    }
-
-    function touchDragEnd(event){
-      const source = event.currentTarget;
-      source.removeEventListener('pointermove', touchDragMove);
-      if(ghost) ghost.remove();
-      ghost = null;
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.cell');
-      if(target && board.contains(target)) placeShape(Number(target.dataset.index), draggingShape);
-      draggingShape = null;
-    }
-
-    function audioContext(){
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if(!AudioCtx) return null;
-      if(!window._shapeGameAudio) window._shapeGameAudio = new AudioCtx();
-      if(window._shapeGameAudio.state === 'suspended') window._shapeGameAudio.resume();
-      return window._shapeGameAudio;
-    }
-
-    function playTone(frequency, duration, type='sine', volume=.08, delay=0){
-      const ctx = audioContext();
-      if(!ctx) return;
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const start = ctx.currentTime + delay;
-      oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, start);
-      gain.gain.setValueAtTime(.0001, start);
-      gain.gain.exponentialRampToValueAtTime(volume, start + .02);
-      gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
-      oscillator.connect(gain).connect(ctx.destination);
-      oscillator.start(start);
-      oscillator.stop(start + duration + .03);
-    }
-
-    function playSuccessSound(){
-      [523.25,659.25,783.99,1046.5].forEach((frequency,index) => {
-        playTone(frequency,.28,'triangle',.075,index*.12);
-      });
-    }
-
-    function playWrongSound(){
-      playTone(220,.18,'sawtooth',.04,0);
-      playTone(174.61,.28,'sawtooth',.035,.16);
-    }
-
-    function celebrate(){
-      const colors = ['#ff5577','#ffd84d','#61c9ff','#73dc85','#b786ff','#ff9d3d'];
-      for(let i=0;i<80;i++){
-        const piece = document.createElement('i');
-        piece.className = 'confetti';
-        piece.style.left = `${Math.random()*100}vw`;
-        piece.style.background = colors[i % colors.length];
-        piece.style.setProperty('--duration', `${2.2 + Math.random()*1.8}s`);
-        piece.style.setProperty('--drift', `${-100 + Math.random()*200}px`);
-        piece.style.setProperty('--spin', `${360 + Math.random()*900}deg`);
-        piece.style.animationDelay = `${Math.random()*.45}s`;
-        document.body.appendChild(piece);
-        setTimeout(() => piece.remove(), 4600);
-      }
-    }
-
-    resetButton.addEventListener('click', resetInput);
-    doneButton.addEventListener('click', grade);
-    nextButton.addEventListener('click', nextLevel);
-    retryButton.addEventListener('click', retryLevel);
-    endButton.addEventListener('click', endGame);
-
-    buildBoard();
-    buildPalette();
-    startLevel(false);
-  </script>
+<script>
+'use strict';
+const MEMORY_SECONDS=20,MAX_LEVEL=10;
+const LEVELS=[
+ {size:3,count:3},{size:3,count:4},{size:3,count:5},
+ {size:4,count:5},{size:4,count:6},{size:4,count:7},{size:4,count:8},
+ {size:4,count:10},{size:4,count:12},{size:4,count:16}
+];
+const SHAPES=[{id:'circle',symbol:'○',label:'まる'},{id:'triangle',symbol:'△',label:'さんかく'},{id:'square',symbol:'□',label:'しかく'},{id:'cross',symbol:'×',label:'ばつ'},{id:'arrow-up',symbol:'↑',label:'うえ'},{id:'arrow-right',symbol:'→',label:'みぎ'},{id:'arrow-down',symbol:'↓',label:'した'},{id:'arrow-left',symbol:'←',label:'ひだり'}];
+const $=id=>document.getElementById(id),board=$('board'),palette=$('palette'),levelText=$('levelText'),message=$('message'),timer=$('timer'),timeValue=$('timeValue'),memoryAction=$('memoryAction'),okButton=$('okButton'),answerControls=$('answerControls'),resultControls=$('resultControls'),resetButton=$('resetButton'),doneButton=$('doneButton'),endButton=$('endButton'),nextButton=$('nextButton'),retryButton=$('retryButton'),levelImage=$('levelImage'),imageHelp=$('imageHelp');
+let level=1,phase='memory',answer=[],input=[],selectedShape=null,timerId=null,remaining=MEMORY_SECONDS,ghost=null,draggingShape=null;
+const spec=()=>LEVELS[level-1]; const shapeById=id=>SHAPES.find(s=>s.id===id);
+function makeShape(id,extra=''){const d=shapeById(id),e=document.createElement('span');e.className=`shape ${extra}`.trim();e.dataset.shape=id;e.textContent=d.symbol;e.setAttribute('aria-label',d.label);return e}
+function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]]}return c}
+function createProblem(){const cells=spec().size**2;answer=Array(cells).fill(null);input=Array(cells).fill(null);const places=shuffle([...Array(cells).keys()]);let ids=[];if(level<8){ids=shuffle(SHAPES).slice(0,spec().count).map(s=>s.id)}else{const first=shuffle(SHAPES).map(s=>s.id);ids=first.slice(0,Math.min(8,spec().count));while(ids.length<spec().count)ids.push(SHAPES[Math.floor(Math.random()*SHAPES.length)].id);ids=shuffle(ids)}ids.forEach((id,i)=>answer[places[i]]=id)}
+function buildBoard(){const cells=spec().size**2;board.innerHTML='';board.className=`board grid-${spec().size}`;board.setAttribute('aria-label',`${spec().size}かける${spec().size}の記憶マス`);for(let i=0;i<cells;i++){const c=document.createElement('div');c.className='cell';c.dataset.index=i;c.tabIndex=0;c.addEventListener('click',()=>handleCellClick(i));c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleCellClick(i)}});c.addEventListener('dragover',e=>e.preventDefault());c.addEventListener('drop',e=>{e.preventDefault();placeShape(i,e.dataTransfer.getData('text/plain'))});board.appendChild(c)}}
+function buildPalette(){palette.innerHTML='';SHAPES.forEach(s=>{const b=document.createElement('button');b.type='button';b.className='shape-btn';b.dataset.shape=s.id;b.draggable=true;b.setAttribute('aria-label',`${s.label}を選ぶ`);b.appendChild(makeShape(s.id));b.addEventListener('click',()=>selectShape(s.id));b.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='copy'});b.addEventListener('pointerdown',e=>beginTouchDrag(e,s.id));palette.appendChild(b)})}
+function render(values,answerMode=false){[...board.children].forEach((c,i)=>{c.className=`cell${answerMode?' answer-mode':''}`;c.innerHTML='';if(values[i])c.appendChild(makeShape(values[i]))})}
+function updateImage(displayLevel=level,animate=false){const n=Math.min(5,Math.max(1,displayLevel));imageHelp.style.display='none';levelImage.style.display='block';levelImage.src=`lv${n}.png`;levelImage.alt=`レベル${n}の成長イラスト`;levelImage.classList.remove('evolve');if(animate){void levelImage.offsetWidth;levelImage.classList.add('evolve')}}
+levelImage.addEventListener('error',()=>{levelImage.style.display='none';imageHelp.style.display='flex'});
+function startLevel(same=false){clearInterval(timerId);phase='memory';selectedShape=null;remaining=MEMORY_SECONDS;levelText.textContent=`レベル${level}`;message.textContent='ずけいを おぼえよう';message.className='message small';timer.classList.remove('hidden','danger');memoryAction.classList.remove('hidden');timeValue.textContent=remaining;answerControls.classList.add('hidden');resultControls.classList.add('hidden');retryButton.classList.add('hidden');nextButton.classList.remove('hidden');nextButton.textContent=level===MAX_LEVEL?'さいしょへ':'つぎへ';if(!same)createProblem();else input=Array(spec().size**2).fill(null);buildBoard();render(answer);updateImage(level,false);timerId=setInterval(()=>{remaining--;timeValue.textContent=remaining;if(remaining<=5)timer.classList.add('danger');if(remaining<=0)beginAnswer()},1000)}
+function beginAnswer(){if(phase!=='memory')return;clearInterval(timerId);phase='answer';selectedShape=null;timer.classList.add('hidden');memoryAction.classList.add('hidden');message.textContent='おぼえた ばしょに おこう';message.className='message small';answerControls.classList.remove('hidden');resultControls.classList.add('hidden');updateSelection();render(input,true)}
+function selectShape(id){if(phase!=='answer')return;selectedShape=selectedShape===id?null:id;updateSelection()}function updateSelection(){document.querySelectorAll('.shape-btn').forEach(b=>b.classList.toggle('selected',b.dataset.shape===selectedShape))}
+function handleCellClick(i){if(phase!=='answer')return;if(selectedShape)placeShape(i,selectedShape);else if(input[i]){input[i]=null;render(input,true)}}function placeShape(i,id){if(phase!=='answer'||!shapeById(id))return;input[i]=id;render(input,true)}
+function resetInput(){if(phase!=='answer')return;input=Array(spec().size**2).fill(null);selectedShape=null;updateSelection();render(input,true);playTone(330,.07,'sine',.05)}
+function grade(){if(phase!=='answer')return;phase='result';const good=answer.every((v,i)=>v===input[i]);answerControls.classList.add('hidden');resultControls.classList.remove('hidden');good?showCorrect():showIncorrect()}
+function showCorrect(){message.textContent=level===MAX_LEVEL?'ぜんぶ せいかい！':'せいかい！';message.className='message';retryButton.classList.add('hidden');nextButton.classList.remove('hidden');[...board.children].forEach(c=>c.classList.add('correct-cell'));updateImage(Math.min(level+1,5),true);celebrate();playSuccess()}
+function showIncorrect(){message.textContent='ざんねん！';message.className='message';nextButton.classList.add('hidden');retryButton.classList.remove('hidden');[...board.children].forEach((c,i)=>{c.className='cell';c.innerHTML='';if(input[i])c.appendChild(makeShape(input[i]));if(input[i]!==answer[i]){c.classList.add('wrong-cell');if(answer[i])c.appendChild(makeShape(answer[i],'correct-overlay'));else{const x=document.createElement('span');x.className='shape correct-overlay wrong-empty';x.textContent='×';c.appendChild(x)}}});playWrong()}
+function nextLevel(){level=level<MAX_LEVEL?level+1:1;startLevel(false)}function retryLevel(){startLevel(true)}function endGame(){window.location.href='../index.html'}
+function beginTouchDrag(e,id){if(phase!=='answer'||e.pointerType==='mouse')return;e.preventDefault();draggingShape=id;ghost=document.createElement('div');ghost.className='drag-ghost';ghost.appendChild(makeShape(id));document.body.appendChild(ghost);moveGhost(e.clientX,e.clientY);e.currentTarget.setPointerCapture(e.pointerId);e.currentTarget.addEventListener('pointermove',touchMove);e.currentTarget.addEventListener('pointerup',touchEnd,{once:true});e.currentTarget.addEventListener('pointercancel',touchEnd,{once:true})}function touchMove(e){e.preventDefault();moveGhost(e.clientX,e.clientY)}function moveGhost(x,y){if(ghost){ghost.style.left=`${x}px`;ghost.style.top=`${y}px`}}function touchEnd(e){e.currentTarget.removeEventListener('pointermove',touchMove);if(ghost)ghost.remove();ghost=null;const t=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');if(t&&board.contains(t))placeShape(+t.dataset.index,draggingShape);draggingShape=null}
+function audio(){const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;if(!window._zgAudio)window._zgAudio=new A();if(window._zgAudio.state==='suspended')window._zgAudio.resume();return window._zgAudio}function playTone(f,d,type='sine',vol=.08,delay=0){const c=audio();if(!c)return;const o=c.createOscillator(),g=c.createGain(),s=c.currentTime+delay;o.type=type;o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(vol,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g).connect(c.destination);o.start(s);o.stop(s+d+.03)}function playSuccess(){[523,659,784,1047].forEach((f,i)=>playTone(f,.28,'triangle',.075,i*.12))}function playWrong(){playTone(220,.18,'sawtooth',.04);playTone(175,.28,'sawtooth',.035,.16)}
+function celebrate(){const colors=['#ff5577','#ffd84d','#61c9ff','#73dc85','#b786ff','#ff9d3d'];for(let i=0;i<80;i++){const p=document.createElement('i');p.className='confetti';p.style.left=`${Math.random()*100}vw`;p.style.background=colors[i%colors.length];p.style.setProperty('--duration',`${2.2+Math.random()*1.8}s`);p.style.setProperty('--drift',`${-100+Math.random()*200}px`);p.style.setProperty('--spin',`${360+Math.random()*900}deg`);p.style.animationDelay=`${Math.random()*.45}s`;document.body.appendChild(p);setTimeout(()=>p.remove(),4600)}}
+okButton.addEventListener('click',beginAnswer);resetButton.addEventListener('click',resetInput);doneButton.addEventListener('click',grade);nextButton.addEventListener('click',nextLevel);retryButton.addEventListener('click',retryLevel);endButton.addEventListener('click',endGame);buildPalette();startLevel(false);
+</script>
 </body>
 </html>
