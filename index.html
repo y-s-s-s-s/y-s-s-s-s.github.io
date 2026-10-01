@@ -6,6 +6,7 @@
   <title>Mini Game Arcade</title>
   <meta name="description" content="ミニゲーム集" />
   <meta name="theme-color" content="#0b1220" />
+
   <style>
     :root{
       --bg0:#070a14;
@@ -17,158 +18,228 @@
       --shadow: 0 14px 40px rgba(0,0,0,.35);
       --r: 16px;
     }
-    *{ box-sizing: border-box; }
-    html,body{ height:100%; }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      height:100%;
+    }
+
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
-      color: var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
+      "Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",Arial,sans-serif;
+      color:var(--text);
+
       background:
         radial-gradient(900px 500px at 18% 10%, rgba(124,58,237,.22), transparent 60%),
         radial-gradient(900px 500px at 88% 20%, rgba(6,182,212,.18), transparent 60%),
         radial-gradient(700px 450px at 60% 85%, rgba(34,197,94,.14), transparent 60%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
+
       overflow-x:hidden;
     }
+
     .wrap{
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 28px 16px 60px;
+      max-width:1300px;
+      margin:0 auto;
+      padding:28px 16px 60px;
     }
 
-    /* Grid: 3 columns x 2 rows (responsive) */
     .grid{
       display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
     }
-    @media (max-width: 900px){
-      .grid{ grid-template-columns: repeat(2, 1fr); }
+
+    @media (max-width:900px){
+      .grid{
+        grid-template-columns:repeat(2,1fr);
+      }
     }
-    @media (max-width: 560px){
-      .grid{ grid-template-columns: 1fr; }
+
+    @media (max-width:560px){
+      .grid{
+        grid-template-columns:1fr;
+      }
     }
 
     a.card{
       display:block;
       text-decoration:none;
-      color: inherit;
-      border-radius: calc(var(--r) + 6px);
-      border: 1px solid var(--line);
-      background: var(--card);
-      box-shadow: var(--shadow);
+      color:inherit;
+
+      border-radius:calc(var(--r) + 6px);
+      border:1px solid var(--line);
+
+      background:var(--card);
+      box-shadow:var(--shadow);
+
       overflow:hidden;
-      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      transition:
+        transform .18s ease,
+        background .18s ease,
+        border-color .18s ease;
     }
+
     a.card:hover{
-      transform: translateY(-3px);
-      background: rgba(255,255,255,.085);
-      border-color: rgba(255,255,255,.22);
-    }
-    a.card:focus-visible{
-      outline: 3px solid rgba(34,197,94,.55);
-      outline-offset: 3px;
+      transform:translateY(-3px);
+      background:rgba(255,255,255,.085);
+      border-color:rgba(255,255,255,.22);
     }
 
     .thumb{
       width:100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio:16 / 9;
+
       background:
         radial-gradient(120px 80px at 20% 30%, rgba(255,255,255,.12), transparent 60%),
         linear-gradient(135deg, rgba(124,58,237,.20), rgba(6,182,212,.10));
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      position: relative;
+
+      border-bottom:1px solid rgba(255,255,255,.10);
+      position:relative;
     }
+
     .thumb img{
       width:100%;
       height:100%;
-      object-fit: cover;
+      object-fit:cover;
       display:block;
     }
 
     .name{
-      padding: 12px 14px 14px;
-      font-size: 14px;
-      letter-spacing: .2px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+      padding:12px 14px 14px;
+      font-size:14px;
+      letter-spacing:.2px;
+      color:var(--muted);
 
-    /* Reduced motion */
-    @media (prefers-reduced-motion: reduce){
-      a.card{ transition: none; }
-      a.card:hover{ transform:none; }
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
   </style>
 </head>
 
 <body>
+
   <main class="wrap">
+
     <section class="grid" aria-label="ミニゲーム一覧">
+
+      <!-- 1 -->
       <a class="card" href="Interview/" aria-label="インタビュー">
         <div class="thumb">
-          <img src="game1.jpg" alt="ゲーム1のイメージ画像">
+          game1.jpg
         </div>
         <div class="name">インタビュー</div>
       </a>
 
-      <a class="card" href="count/index.html" aria-label="ゲーム2へ">
+      <!-- 2 -->
+      <a class="card" href="count/index.html" aria-label="かぞえる">
         <div class="thumb">
-          <img src="game2.jpg" alt="ゲーム2のイメージ画像">
+          game2.jpg
         </div>
         <div class="name">かぞえる</div>
       </a>
 
-      <a class="card" href="seesaw/index.html" aria-label="ゲーム3へ">
+      <!-- 3 -->
+      <a class="card" href="seesaw/index.html" aria-label="おもさくらべ">
         <div class="thumb">
-          <img src="game3.jpg" alt="ゲーム3のイメージ画像">
-        </div>
+          <img src="        </div>
         <div class="name">おもさくらべ</div>
       </a>
 
-      <a class="card" href="connect/index.html" aria-label="ゲーム4へ">
+      <!-- 4 -->
+      <a class="card" href="connect/index.html" aria-label="てんつなぎ">
         <div class="thumb">
-          <img src="game4.jpg" alt="ゲーム4のイメージ画像">
+          game4.jpg
         </div>
         <div class="name">てんつなぎ</div>
       </a>
 
-      <a class="card" href="karada/index.html" aria-label="ゲーム5へ">
+      <!-- 5 -->
+      <a class="card" href="karada/index.html" aria-label="からだトレーニング">
         <div class="thumb">
-          <img src="game5.jpg" alt="ゲーム5のイメージ画像">
-        </div>
+          <img src="game5.jpg" iv>
         <div class="name">からだトレーニング</div>
       </a>
 
-      <a class="card" href="eizokioku/index.html" aria-label="ゲーム6へ">
+      <!-- 6 -->
+      <a class="card" href="eizokioku/index.html" aria-label="えいぞうきおく">
         <div class="thumb">
-          <img src="game6.jpg" alt="ゲーム6のイメージ画像">
+          game6.jpg
         </div>
-        <div class="name"> えいぞう きおく</div>
+        <div class="name">えいぞう きおく</div>
       </a>
+
+      <!-- 7 -->
+      <a class="card" href="game7/v class="thumb">
+          <img srcg
+        </div>
+        <div class="name">ひらがな</div>
+      </a>
+
+      <!-- 8 -->
+      <a e8/index.html
+        <div class="thumb">
+          <img src="game8.  </div>
+        <div class="name">カタカナ</div>
+      </a>
+
+      <!-- 9 -->
+      <a class="card" href="game9/index.htmlhumb">
+          <img src="game    </div>
+        <div class="name">とけい</div>
+      </a>
+
+      <!-- 10 -->
+      <a class="card" l
+        <div class="thumb">
+          <img src="game10.jpg" alt="ゲーム    <div class="name">たしざん</div>
+      </a>
+
+      <!-- 11 -->
+      <a class="card" href="game11/indexss="thumb">
+          <img src="game11.jpg" alt
+        <div class="name">かたちあそび</div>
+      </a>
+
+      <!-- 12 -->
+      <a class="card" href=     <div class="thumb">
+          <img src="
+        </div>
+        <div class="name">なかまはずれ</div>
+      </a>
+
     </section>
+
   </main>
 
   <script>
-    // 画像がまだ無いときでも崩れないよう、読み込み失敗時はプレースホルダーにします
     document.querySelectorAll('.thumb img').forEach(img => {
       img.addEventListener('error', () => {
         const thumb = img.closest('.thumb');
+
         img.remove();
+
         const ph = document.createElement('div');
+
         ph.textContent = 'image';
+
         ph.style.cssText = `
-          width:100%; height:100%;
-          display:flex; align-items:center; justify-content:center;
-          color: rgba(255,255,255,.75);
-          font-size: 13px;
-          letter-spacing:.2px;
+          width:100%;
+          height:100%;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:rgba(255,255,255,.75);
+          font-size:13px;
         `;
+
         thumb.appendChild(ph);
       }, { once:true });
     });
   </script>
+
 </body>
 </html>
