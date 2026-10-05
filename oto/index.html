@@ -1,11 +1,72 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>おとの ほうがく ゲーム</title><style>
-*{box-sizing:border-box}body{margin:0;background:#fffdf7;font-family:"Yu Gothic",Meiryo,sans-serif;color:#171717}button{font:inherit}.app{max-width:1280px;min-height:100vh;margin:auto;padding:20px;display:grid;grid-template-columns:minmax(520px,1.15fr) minmax(380px,.85fr);gap:40px;align-items:center}.board{width:min(78vh,680px,100%);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:3px solid #222;background:#fff}.cell{position:relative;border:0;border-right:1px solid #222;border-bottom:1px solid #222;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}.cell:nth-child(9n){border-right:0}.cell:nth-child(n+73){border-bottom:0}.cell:hover{background:#edf8ff}.cell.disabled{cursor:default}.cell.disabled:hover{background:#fff}.dot,.goal,.trail{aspect-ratio:1;border-radius:50%;pointer-events:none}.dot{width:60%;background:#000}.goal{width:68%;background:#62c978;border:3px solid #15882e}.trail{width:25%;background:#9bd8f8}.wrong{position:absolute;width:75%;height:8%;background:#ef3d45;border-radius:99px;transform:rotate(-45deg)}.wrong:after{content:"";position:absolute;inset:0;background:#ef3d45;border-radius:99px;transform:rotate(90deg)}.side{min-height:650px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}h1{font-size:46px;margin:0 0 10px}.message{font-size:30px;font-weight:900;margin-bottom:12px}.legend{width:min(470px,100%);display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}.card{min-height:100px;border:2px solid #222;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:space-evenly;padding:8px}.icon{font-size:44px}.name{font-weight:800}.arrow{font:900 62px Arial}.controls{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:5px 0 12px}.btn{padding:10px 18px;min-width:130px;border:2px solid #222;border-radius:12px;background:#fff;font-size:23px;font-weight:900;cursor:pointer}.primary{background:#7dc9f2}.green{background:#7bd589}.btn:disabled{opacity:.45}.status{min-height:32px;font-weight:800;color:#555}.picture{width:min(470px,95%);height:245px;display:flex;align-items:center;justify-content:center;position:relative}.picture img{max-width:100%;max-height:100%;object-fit:contain}.help{display:none;color:#666}.hidden{display:none!important}.evolve{animation:evolve .8s ease}.confetti{position:fixed;top:-20px;width:12px;height:19px;z-index:100;animation:fall var(--d) linear forwards}@keyframes evolve{50%{transform:scale(1.08);filter:drop-shadow(0 0 22px gold)}}@keyframes fall{to{transform:translate(var(--x),110vh) rotate(800deg)}}@media(max-width:900px){.app{grid-template-columns:1fr}.board{width:min(94vw,680px)}.side{min-height:0}}
-</style></head><body><main class="app"><section><div id="board" class="board"></div></section><section class="side"><h1 id="level">レベル 1</h1><div id="message" class="message">おとを きいて すすもう</div><div id="legend" class="legend"></div><div class="controls"><button id="start" class="btn primary">おとを きく</button><button id="replay" class="btn" disabled>もういちど きく</button><button id="next" class="btn green hidden">つぎへ</button><button id="retry" class="btn primary hidden">もういちど</button><button id="end" class="btn">おわる</button></div><div id="status" class="status">黒い丸がスタート</div><div class="picture"><img id="pic" src="lv1.png"><div id="help" class="help">lv1.png～lv10.pngを同じフォルダーに置いてください</div></div></section></main><script>
-'use strict';const GRID=9,MAX=10,CLIP=800,INTERVAL=800,COUNTS=[2,3,4,5,6,7,8,9,10,11];const DIRS=[{id:'up',a:'↑',dr:-1,dc:0},{id:'right',a:'→',dr:0,dc:1},{id:'down',a:'↓',dr:1,dc:0},{id:'left',a:'←',dr:0,dc:-1}];const INST=[{id:'suzu',n:'すず',i:'🔔',f:'suzu.mp3'},{id:'taiko',n:'たいこ',i:'🥁',f:'taiko.mp3'},{id:'hue',n:'ふえ',i:'📣',f:'hue.mp3'},{id:'triangle',n:'トライアングル',i:'△',f:'Triangle.mp3'}];const $=x=>document.getElementById(x),board=$('board'),legend=$('legend'),levelEl=$('level'),message=$('message'),startBtn=$('start'),replayBtn=$('replay'),nextBtn=$('next'),retryBtn=$('retry'),endBtn=$('end'),status=$('status'),pic=$('pic'),help=$('help');const audio={};INST.forEach(x=>audio[x.id]=new Audio(x.f));let lv=1,start={r:4,c:4},goal,moves=[],map={},path=[],phase='ready',token=0;
-function shuffle(a){a=[...a];for(let i=a.length-1;i;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}function idx(p){return p.r*GRID+p.c}function inside(r,c){return r>=0&&r<GRID&&c>=0&&c<GRID}function stop(){Object.values(audio).forEach(a=>{a.pause();a.currentTime=0})}function mapping(){let d=shuffle(DIRS);map={};INST.forEach((x,i)=>map[x.id]=d[i]);legend.innerHTML=INST.map(x=>`<div class="card"><div><div class="icon">${x.i}</div><div class="name">${x.n}</div></div><div class="arrow">${map[x.id].a}</div></div>`).join('')}
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>おとの ほうがく ゲーム</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fffdf7;font-family:"Yu Gothic",Meiryo,sans-serif;color:#171717}
+button{font:inherit}
+.app{max-width:1180px;min-height:100vh;margin:auto;padding:20px;display:grid;grid-template-columns:minmax(520px,1fr) minmax(270px,.55fr);gap:24px;align-items:center}
+.board{width:min(78vh,680px,100%);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:3px solid #222;background:#fff}
+.cell{position:relative;border:0;border-right:1px solid #222;border-bottom:1px solid #222;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cell:nth-child(9n){border-right:0}.cell:nth-child(n+73){border-bottom:0}.cell:hover{background:#edf8ff}.cell.disabled{cursor:default}.cell.disabled:hover{background:#fff}
+.dot,.goal,.trail{aspect-ratio:1;border-radius:50%;pointer-events:none}.dot{width:60%;background:#000}.goal{width:68%;background:#62c978;border:3px solid #15882e}.trail{width:25%;background:#9bd8f8}
+.wrong{position:absolute;width:75%;height:8%;background:#ef3d45;border-radius:99px;transform:rotate(-45deg)}.wrong:after{content:"";position:absolute;inset:0;background:#ef3d45;border-radius:99px;transform:rotate(90deg)}
+.side{min-height:480px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+h1{font-size:23px;margin:0 0 6px}
+.legend{width:min(350px,100%);display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px}
+.card{height:52px;border:2px solid #222;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:space-evenly;padding:3px 6px}
+.icon{font-size:25px;line-height:1}.name{font-size:12px;font-weight:800;line-height:1.1;margin-top:2px}.arrow{font:900 34px Arial;line-height:1}
+.controls{display:flex;justify-content:center;gap:10px;margin:2px 0 6px}
+.btn{padding:8px 16px;min-width:110px;border:2px solid #222;border-radius:12px;background:#fff;font-size:20px;font-weight:900;cursor:pointer}.primary{background:#7dc9f2}.btn:disabled{opacity:.45;cursor:default}
+.picture{width:min(350px,92%);height:190px;display:flex;align-items:center;justify-content:center;position:relative}.picture img{max-width:100%;max-height:100%;object-fit:contain}.help{display:none;color:#666;font-size:12px}
+.evolve{animation:evolve 1s ease}.confetti{position:fixed;top:-20px;width:12px;height:19px;z-index:100;animation:fall var(--d) linear forwards;pointer-events:none}
+@keyframes evolve{25%{transform:scale(.94)}55%{transform:scale(1.12);filter:drop-shadow(0 0 25px gold)}100%{transform:scale(1)}}
+@keyframes fall{to{transform:translate(var(--x),110vh) rotate(800deg)}}
+@media(max-width:900px){.app{grid-template-columns:1fr;gap:12px}.board{width:min(94vw,680px)}.side{min-height:0}.picture{height:150px}}
+</style>
+</head>
+<body>
+<main class="app">
+<section><div id="board" class="board"></div></section>
+<section class="side">
+<h1 id="level">レベル 1</h1>
+<div id="legend" class="legend"></div>
+<div class="controls">
+<button id="listen" class="btn primary">きく</button>
+<button id="end" class="btn">おわる</button>
+</div>
+<div class="picture"><img id="pic" src="lv1.png" alt="レベル画像"><div id="help" class="help">lv1.png～lv10.pngを同じフォルダーに置いてください</div></div>
+</section>
+</main>
+<script>
+'use strict';
+const GRID=9,MAX=10,CLIP=800,INTERVAL=800,COUNTS=[2,3,4,5,6,7,8,9,10,11];
+const DIRS=[{id:'up',a:'↑',dr:-1,dc:0},{id:'right',a:'→',dr:0,dc:1},{id:'down',a:'↓',dr:1,dc:0},{id:'left',a:'←',dr:0,dc:-1}];
+const INST=[{id:'suzu',n:'すず',i:'🔔',f:'suzu.mp3'},{id:'taiko',n:'たいこ',i:'🥁',f:'taiko.mp3'},{id:'hue',n:'ふえ',i:'📣',f:'hue.mp3'},{id:'triangle',n:'トライアングル',i:'△',f:'Triangle.mp3'}];
+const $=x=>document.getElementById(x),board=$('board'),legend=$('legend'),levelEl=$('level'),listenBtn=$('listen'),endBtn=$('end'),pic=$('pic'),help=$('help');
+const audio={};INST.forEach(x=>audio[x.id]=new Audio(x.f));
+let lv=1,start={r:4,c:4},goal,moves=[],map={},path=[],phase='ready',token=0;
+function shuffle(a){a=[...a];for(let i=a.length-1;i;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function idx(p){return p.r*GRID+p.c}function inside(r,c){return r>=0&&r<GRID&&c>=0&&c<GRID}
+function stop(){Object.values(audio).forEach(a=>{a.pause();a.currentTime=0})}
+function mapping(){let d=shuffle(DIRS);map={};INST.forEach((x,i)=>map[x.id]=d[i]);legend.innerHTML=INST.map(x=>`<div class="card"><div><div class="icon">${x.i}</div><div class="name">${x.n}</div></div><div class="arrow">${map[x.id].a}</div></div>`).join('')}
 function problem(){mapping();start={r:4,c:4};let n=COUNTS[lv-1];for(let z=0;z<500;z++){let p={...start},seq=[],way=[{...p}];for(let i=0;i<n;i++){let ok=INST.filter(x=>{let d=map[x.id];return inside(p.r+d.dr,p.c+d.dc)}),x=ok[Math.floor(Math.random()*ok.length)],d=map[x.id];seq.push(x.id);p={r:p.r+d.dr,c:p.c+d.dc};way.push({...p})}if(p.r!==4||p.c!==4){moves=seq;goal=p;path=way;return}}}
-function build(){board.innerHTML='';for(let i=0;i<81;i++){let c=document.createElement('button');c.className='cell';c.onclick=()=>choose(i);board.appendChild(c)}}function render(result=false,chosen=-1){[...board.children].forEach((c,i)=>{c.innerHTML='';c.className='cell '+(phase==='answer'?'':'disabled');if(i===idx(start)){let x=document.createElement('span');x.className='dot';c.appendChild(x)}});if(result){path.slice(1,-1).forEach(p=>{let x=document.createElement('span');x.className='trail';board.children[idx(p)].appendChild(x)});let g=document.createElement('span');g.className='goal';board.children[idx(goal)].appendChild(g);if(chosen!==idx(goal)){let w=document.createElement('span');w.className='wrong';board.children[chosen].appendChild(w)}}}function image(n,anim=false){help.style.display='none';pic.style.display='block';pic.src=`lv${n}.png`;pic.classList.remove('evolve');if(anim){void pic.offsetWidth;pic.classList.add('evolve')}}pic.onerror=()=>{pic.style.display='none';help.style.display='block'};
-function prepare(){token++;stop();phase='ready';levelEl.textContent=`レベル ${lv}`;message.textContent='おとを きいて すすもう';status.textContent='黒い丸がスタート';startBtn.classList.remove('hidden');startBtn.disabled=false;replayBtn.disabled=true;nextBtn.classList.add('hidden');retryBtn.classList.add('hidden');problem();render();image(lv)}function sleep(ms){return new Promise(r=>setTimeout(r,ms))}async function play(){if(phase==='playing')return;let t=++token;phase='playing';render();startBtn.disabled=true;replayBtn.disabled=true;message.textContent='よく きいてね';for(let i=0;i<moves.length;i++){if(t!==token)return;let a=audio[moves[i]];stop();a.currentTime=0;status.textContent=`${i+1} / ${moves.length}`;try{await a.play()}catch(e){status.textContent='音声ファイルを確認してください'}setTimeout(()=>{a.pause();a.currentTime=0},CLIP);await sleep(INTERVAL)}if(t!==token)return;stop();phase='answer';message.textContent='どこに つくかな？';status.textContent='こたえのマスをタップ';startBtn.classList.add('hidden');replayBtn.disabled=false;render()}
-function choose(i){if(phase!=='answer')return;phase='result';let ok=i===idx(goal);render(true,i);replayBtn.disabled=true;if(ok){message.textContent='せいかい！';status.textContent='よくできました';nextBtn.classList.remove('hidden');image(lv,true);confetti()}else{message.textContent='ざんねん！';status.textContent='緑の丸が正解です';retryBtn.classList.remove('hidden')}}function confetti(){for(let i=0;i<60;i++){let p=document.createElement('i');p.className='confetti';p.style.left=Math.random()*100+'vw';p.style.background=['#f57','#fd4','#61c9ff','#73dc85','#b786ff'][i%5];p.style.setProperty('--d',2+Math.random()*1.5+'s');p.style.setProperty('--x',-100+Math.random()*200+'px');document.body.appendChild(p);setTimeout(()=>p.remove(),4000)}}
-startBtn.onclick=play;replayBtn.onclick=()=>{if(phase==='answer'){phase='ready';play()}};nextBtn.onclick=()=>{lv=lv<MAX?lv+1:1;prepare()};retryBtn.onclick=prepare;endBtn.onclick=()=>{token++;stop();location.href='../index.html'};build();prepare();
-</script></body></html>
+function build(){board.innerHTML='';for(let i=0;i<81;i++){let c=document.createElement('button');c.className='cell';c.onclick=()=>choose(i);board.appendChild(c)}}
+function render(result=false,chosen=-1){[...board.children].forEach((c,i)=>{c.innerHTML='';c.className='cell '+(phase==='answer'?'':'disabled');if(i===idx(start)){let x=document.createElement('span');x.className='dot';c.appendChild(x)}});if(result){path.slice(1,-1).forEach(p=>{let x=document.createElement('span');x.className='trail';board.children[idx(p)].appendChild(x)});let g=document.createElement('span');g.className='goal';board.children[idx(goal)].appendChild(g);if(chosen!==idx(goal)){let w=document.createElement('span');w.className='wrong';board.children[chosen].appendChild(w)}}}
+function image(n,anim=false){help.style.display='none';pic.style.display='block';pic.src=`lv${n}.png`;pic.classList.remove('evolve');if(anim){void pic.offsetWidth;pic.classList.add('evolve')}}
+pic.onerror=()=>{pic.style.display='none';help.style.display='block'};
+function prepare(keepImage=false){token++;stop();phase='ready';levelEl.textContent=`レベル ${lv}`;listenBtn.disabled=false;problem();render();if(!keepImage)image(lv)}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+async function play(){if(phase==='playing')return;let t=++token;phase='playing';render();listenBtn.disabled=true;for(let i=0;i<moves.length;i++){if(t!==token)return;let a=audio[moves[i]];stop();a.currentTime=0;try{await a.play()}catch(e){}setTimeout(()=>{a.pause();a.currentTime=0},CLIP);await sleep(INTERVAL)}if(t!==token)return;stop();phase='answer';listenBtn.disabled=false;render()}
+function successMusic(){try{const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),notes=[523.25,659.25,783.99,1046.5];notes.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,ctx.currentTime+i*.13);g.gain.exponentialRampToValueAtTime(.18,ctx.currentTime+i*.13+.025);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+i*.13+.28);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*.13);o.stop(ctx.currentTime+i*.13+.3)});setTimeout(()=>ctx.close(),1200)}catch(e){}}
+function choose(i){if(phase!=='answer')return;phase='result';let ok=i===idx(goal);render(true,i);if(ok){successMusic();confetti();lv=lv<MAX?lv+1:1;levelEl.textContent=`レベル ${lv}`;image(lv,true);setTimeout(()=>prepare(true),1050)}else{listenBtn.disabled=false}}
+function confetti(){for(let i=0;i<80;i++){let p=document.createElement('i');p.className='confetti';p.style.left=Math.random()*100+'vw';p.style.background=['#f57','#fd4','#61c9ff','#73dc85','#b786ff'][i%5];p.style.setProperty('--d',2+Math.random()*1.5+'s');p.style.setProperty('--x',-100+Math.random()*200+'px');document.body.appendChild(p);setTimeout(()=>p.remove(),4000)}}
+listenBtn.onclick=()=>{if(phase==='result')prepare(true);play()};
+endBtn.onclick=()=>{token++;stop();location.href='../index.html'};
+build();prepare();
+</script>
+</body>
+</html>
